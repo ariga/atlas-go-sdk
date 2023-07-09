@@ -1,7 +1,6 @@
 package tmplrun
 
 import (
-	"bytes"
 	_ "embed"
 	"testing"
 	"text/template"
@@ -16,14 +15,12 @@ var (
 )
 
 func TestRunner(t *testing.T) {
-	var buf bytes.Buffer
 	runner := New("test", loaderTmpl)
-	runner.out = &buf
-	err := runner.Run(struct {
+	out, err := runner.Run(struct {
 		Message string
 	}{
 		Message: "Hello, World!",
 	})
 	require.NoError(t, err)
-	require.Contains(t, buf.String(), "Hello, World!")
+	require.Contains(t, out, "Hello, World!")
 }

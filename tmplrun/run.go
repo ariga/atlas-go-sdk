@@ -1,5 +1,5 @@
 // package tmplrun provides a Runner for templated go programs. It is commonly used
-// by Go Atlas providers to compile ad hoc programs that emit the desired SQL schema for
+// by Go Atlas providers to compile ad-hoc programs that emit the desired SQL schema for
 // data models defined for Go ORMs.
 
 package tmplrun
@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"go/format"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -22,7 +21,6 @@ import (
 type Runner struct {
 	name string
 	tmpl *template.Template
-	out  io.Writer
 }
 
 // New returns a new Runner.
@@ -30,25 +28,17 @@ func New(name string, tmpl *template.Template) *Runner {
 	return &Runner{name: name, tmpl: tmpl}
 }
 
-// Run runs the template.
-func (r *Runner) Run(data interface{}) error {
+// Run runs the template and returns the output.
+func (r *Runner) Run(data interface{}) (string, error) {
 	var buf bytes.Buffer
 	if err := r.tmpl.Execute(&buf, data); err != nil {
-		return err
+		return "", err
 	}
 	source, err := format.Source(buf.Bytes())
 	if err != nil {
-		return err
+		return "", err
 	}
-	s, err := r.gorun(source)
-	if err != nil {
-		return err
-	}
-	if r.out == nil {
-		r.out = os.Stdout
-	}
-	_, err = fmt.Fprintln(r.out, s)
-	return err
+	return r.gorun(source)
 }
 
 func (r *Runner) gorun(src []byte) (string, error) {
@@ -56,7 +46,7 @@ func (r *Runner) gorun(src []byte) (string, error) {
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return "", err
 	}
-	target := fmt.Sprintf("%s/%s.go", dir, filename(r.name))
+	target := fmt.Sprintf("%s/%s.go", dir, r.filename(r.name))
 	if err := os.WriteFile(target, src, 0644); err != nil {
 		return "", fmt.Errorf("%s: write file %s: %w", r.name, target, err)
 	}
@@ -88,7 +78,7 @@ func gocmd(command, target string) (string, error) {
 	return stdout.String(), nil
 }
 
-func filename(pkg string) string {
+func (r *Runner) filename(pkg string) string {
 	name := strings.ReplaceAll(pkg, "/", "_")
-	return fmt.Sprintf("atlasloader_%s_%d", name, time.Now().Unix())
+	return fmt.Sprintf("%s_%s_%d", r.name, name, time.Now().Unix())
 }
