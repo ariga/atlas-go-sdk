@@ -2,30 +2,26 @@ package atlasexec_test
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"ariga.io/atlas-go-sdk/atlasexec"
-	_ "ariga.io/atlas/sql/mysql"
-	_ "github.com/go-sql-driver/mysql"
 
-	"ariga.io/atlas/sql/sqlclient"
+	_ "github.com/mattn/go-sqlite3"
+
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	mysqlURL = "mysql://root:pass@localhost:3306"
-)
-
 func Test_MigrateApply(t *testing.T) {
-	schema := "test"
-	tempSchemas(t, schema)
 	r := require.New(t)
 	type args struct {
 		ctx  context.Context
 		data *atlasexec.ApplyParams
 	}
+	td := t.TempDir()
 	tests := []struct {
 		name       string
 		args       args
@@ -37,7 +33,7 @@ func Test_MigrateApply(t *testing.T) {
 				ctx: context.Background(),
 				data: &atlasexec.ApplyParams{
 					DirURL: "file://testdata/migrations",
-					URL:    fmt.Sprintf("%s/%s", mysqlURL, schema),
+					URL:    fmt.Sprintf("sqlite://%s/file.db", td),
 				},
 			},
 			wantTarget: "20230727105615",
@@ -60,8 +56,6 @@ func Test_MigrateApply(t *testing.T) {
 }
 
 func Test_MigrateStatus(t *testing.T) {
-	schema := "test"
-	tempSchemas(t, schema)
 	r := require.New(t)
 	type args struct {
 		ctx  context.Context
@@ -79,7 +73,6 @@ func Test_MigrateStatus(t *testing.T) {
 				ctx: context.Background(),
 				data: &atlasexec.StatusParams{
 					DirURL: "file://testdata/migrations",
-					URL:    fmt.Sprintf("%s/%s", mysqlURL, schema),
 				},
 			},
 			wantCurrent: "No migration applied yet",
@@ -92,6 +85,9 @@ func Test_MigrateStatus(t *testing.T) {
 	r.NoError(err)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			dbpath := sqlitedb(t)
+			path := fmt.Sprintf("sqlite://%s", dbpath)
+			tt.args.data.URL = path
 			got, err := c.Status(tt.args.ctx, tt.args.data)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("migrateStatus() error = %v, wantErr %v", err, tt.wantErr)
@@ -206,31 +202,10 @@ schema "main" {
 `, s)
 }
 
-func tempSchemas(t *testing.T, schemas ...string) {
-	c, err := sqlclient.Open(context.Background(), mysqlURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, s := range schemas {
-		_, err := c.ExecContext(context.Background(), fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s`", s))
-		if err != nil {
-			t.Errorf("failed creating schema: %s", err)
-		}
-	}
-	drop(t, c, schemas...)
-}
-
-func drop(t *testing.T, c *sqlclient.Client, schemas ...string) {
-	t.Cleanup(func() {
-		t.Log("Dropping all schemas")
-		for _, s := range schemas {
-			_, err := c.ExecContext(context.Background(), fmt.Sprintf("DROP DATABASE IF EXISTS `%s`", s))
-			if err != nil {
-				t.Errorf("failed dropping schema: %s", err)
-			}
-		}
-		if err := c.Close(); err != nil {
-			t.Errorf("failed closing client: %s", err)
-		}
-	})
+func sqlitedb(t *testing.T) string {
+	td := t.TempDir()
+	dbpath := filepath.Join(td, "file.db")
+	_, err := sql.Open("sqlite3", fmt.Sprintf("file:%s?cache=shared&_fk=1", dbpath))
+	require.NoError(t, err)
+	return dbpath
 }
