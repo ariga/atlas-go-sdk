@@ -8,55 +8,39 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ariga.io/atlas-go-sdk/atlasexec"
-
 	_ "github.com/mattn/go-sqlite3"
-
 	"github.com/stretchr/testify/require"
+
+	"ariga.io/atlas-go-sdk/atlasexec"
 )
 
 func Test_MigrateApply(t *testing.T) {
-	r := require.New(t)
-	type args struct {
-		ctx  context.Context
-		data *atlasexec.ApplyParams
-	}
-	td := t.TempDir()
-	tests := []struct {
-		name       string
-		args       args
-		wantTarget string
-		wantErr    bool
-	}{
-		{
-			args: args{
-				ctx: context.Background(),
-				data: &atlasexec.ApplyParams{
-					DirURL: "file://testdata/migrations",
-					URL:    fmt.Sprintf("sqlite://%s/file.db", td),
-				},
-			},
-			wantTarget: "20230727105615",
-		},
-	}
-	wd, err := os.Getwd()
-	r.NoError(err)
-	c, err := atlasexec.NewClient(wd, "atlas")
-	r.NoError(err)
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := c.Apply(tt.args.ctx, tt.args.data)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("migrateApply() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			require.EqualValues(t, tt.wantTarget, got.Target)
-		})
-	}
+	ec, err := atlasexec.NewWorkingDir(
+		atlasexec.WithMigrations(os.DirFS(filepath.Join("testdata", "migrations"))),
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, ec.Close())
+	})
+	_, err = ec.WriteFile("atlas.hcl", []byte(`
+	env {
+		name = atlas.env
+		url  = "sqlite://file?_fk=1&cache=shared&mode=memory"
+		migration {
+			dir = "file://migrations"
+		}
+	}`))
+	require.NoError(t, err)
+	c, err := atlasexec.NewClientWithDir(ec.Path(), "atlas")
+	require.NoError(t, err)
+	got, err := c.Apply(context.Background(), &atlasexec.ApplyParams{
+		Env: "test",
+	})
+	require.NoError(t, err)
+	require.EqualValues(t, "20230727105615", got.Target)
 }
 
 func Test_MigrateStatus(t *testing.T) {
-	r := require.New(t)
 	type args struct {
 		ctx  context.Context
 		data *atlasexec.StatusParams
@@ -80,9 +64,9 @@ func Test_MigrateStatus(t *testing.T) {
 		},
 	}
 	wd, err := os.Getwd()
-	r.NoError(err)
+	require.NoError(t, err)
 	c, err := atlasexec.NewClient(wd, "atlas")
-	r.NoError(err)
+	require.NoError(t, err)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dbpath := sqlitedb(t)
@@ -100,13 +84,16 @@ func Test_MigrateStatus(t *testing.T) {
 }
 
 func Test_SchemaApply(t *testing.T) {
+	ce, err := atlasexec.NewWorkingDir()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, ce.Close())
+	})
 	f, err := os.CreateTemp("", "sqlite-test")
 	require.NoError(t, err)
 	defer os.Remove(f.Name())
 	u := fmt.Sprintf("sqlite://%s?_fk=1", f.Name())
-	wd, err := os.Getwd()
-	require.NoError(t, err)
-	c, err := atlasexec.NewClient(wd, "atlas")
+	c, err := atlasexec.NewClientWithDir(ce.Path(), "atlas")
 	require.NoError(t, err)
 
 	s1 := `
@@ -115,21 +102,17 @@ func Test_SchemaApply(t *testing.T) {
 		id int NOT NULL,
 		name varchar(100) NULL,
 		PRIMARY KEY(id)
-	);
-	`
-	to, clean, err := atlasexec.TempFile(s1, "sql")
+	);`
+	path, err := ce.WriteFile("schema.sql", []byte(s1))
+	to := fmt.Sprintf("file://%s", path)
 	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, clean())
-	}()
 	_, err = c.SchemaApply(context.Background(), &atlasexec.SchemaApplyParams{
 		URL:    u,
 		To:     to,
 		DevURL: "sqlite://file?_fk=1&cache=shared&mode=memory",
 	})
 	require.NoError(t, err)
-
-	s2 := s1 + `
+	_, err = ce.WriteFile("schema.sql", []byte(s1+`
 	-- create table "blog_posts"
 	CREATE TABLE blog_posts(
 		id int NOT NULL,
@@ -138,12 +121,8 @@ func Test_SchemaApply(t *testing.T) {
 		author_id int NULL,
 		PRIMARY KEY(id),
 		CONSTRAINT author_fk FOREIGN KEY(author_id) REFERENCES users(id)
-	);`
-	to, clean2, err := atlasexec.TempFile(s2, "sql")
+	);`))
 	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, clean2())
-	}()
 	_, err = c.SchemaApply(context.Background(), &atlasexec.SchemaApplyParams{
 		URL:    u,
 		To:     to,
