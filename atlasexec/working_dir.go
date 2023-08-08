@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"text/template"
 )
 
 type (
@@ -21,15 +20,10 @@ type (
 	Option func(ce *WorkingDir) error
 )
 
-// WithAtlasHCL sets the atlasHCL function to create the atlas.hcl file.
-func WithAtlasHCL(tmpl *template.Template, data any) Option {
+// WithAtlasHCL accept a function to create the atlas.hcl file.
+func WithAtlasHCL(fn func(w io.Writer) error) Option {
 	return func(ce *WorkingDir) error {
-		if tmpl == nil {
-			return errors.New("atlasexec: template is nil")
-		}
-		return ce.CreateFile("atlas.hcl", func(w io.Writer) error {
-			return tmpl.Execute(w, data)
-		})
+		return ce.CreateFile("atlas.hcl", fn)
 	}
 }
 

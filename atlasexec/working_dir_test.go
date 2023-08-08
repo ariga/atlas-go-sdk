@@ -2,6 +2,7 @@ package atlasexec
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -38,13 +39,14 @@ func TestContextExecer(t *testing.T) {
 
 	// Test WithAtlasHCL.
 	ce, err = NewWorkingDir(
+		WithAtlasHCL(func(w io.Writer) error {
+			return template.Must(template.New("").Parse(`{{ .foo }} & {{ .bar }}`)).
+				Execute(w, map[string]any{
+					"foo": "foo",
+					"bar": "bar",
+				})
+		}),
 		WithMigrations(src),
-		WithAtlasHCL(
-			template.Must(template.New("").Parse(`{{ .foo }} & {{ .bar }}`)),
-			map[string]any{
-				"foo": "foo",
-				"bar": "bar",
-			}),
 	)
 	require.NoError(t, err)
 	require.DirExists(t, ce.dir, "tmpDir")
