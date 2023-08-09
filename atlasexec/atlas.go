@@ -245,7 +245,9 @@ func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, erro
 	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, c.execPath, args...)
 	cmd.Dir = c.workingDir
-	cmd.Env = append(cmd.Env, "ATLAS_NO_UPDATE_NOTIFIER=1")
+	// Set ATLAS_NO_UPDATE_NOTIFIER=1 to disable the update notifier.
+	// use os.Environ() to avoid overriding the user's environment.
+	cmd.Env = append(os.Environ(), "ATLAS_NO_UPDATE_NOTIFIER=1")
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
@@ -254,15 +256,15 @@ func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, erro
 			// Atlas CLI writes the error to stderr.
 			// So this's critical issue, return the error.
 			return nil, &cliError{
-				summary: stderr.String(),
-				detail:  stdout.String(),
+				summary: strings.TrimSpace(stderr.String()),
+				detail:  strings.TrimSpace(stdout.String()),
 			}
 		case !json.Valid(stdout.Bytes()):
 			// When the output is not valid JSON, it means that
 			// the command failed.
 			return nil, &cliError{
 				summary: "Atlas CLI",
-				detail:  stdout.String(),
+				detail:  strings.TrimSpace(stdout.String()),
 			}
 		case cmd.ProcessState.ExitCode() == 1:
 			// When the exit code is 1, it means that the command
@@ -345,7 +347,11 @@ type cliError struct {
 
 // Error implements the error interface.
 func (e cliError) Error() string {
-	return fmt.Sprintf("atlasexec: %s, %s", e.Summary(), e.Detail())
+	s, d := e.Summary(), e.Detail()
+	if d != "" {
+		return fmt.Sprintf("atlasexec: %s, %s", s, d)
+	}
+	return fmt.Sprintf("atlasexec: %s", s)
 }
 
 // Summary implements the diag.Diagnostic interface.
