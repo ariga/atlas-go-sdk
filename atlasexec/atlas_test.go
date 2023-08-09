@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,22 +18,34 @@ import (
 func Test_MigrateApply(t *testing.T) {
 	ec, err := atlasexec.NewWorkingDir(
 		atlasexec.WithMigrations(os.DirFS(filepath.Join("testdata", "migrations"))),
+		atlasexec.WithAtlasHCL(func(w io.Writer) error {
+			_, err := w.Write([]byte(`
+			variable "url" {
+				type    = string
+				default = getenv("DB_URL")
+			}
+			env {
+				name = atlas.env
+				url  = var.url
+				migration {
+					dir = "file://migrations"
+				}
+			}`))
+			return err
+		}),
 	)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		require.NoError(t, ec.Close())
 	})
-	_, err = ec.WriteFile("atlas.hcl", []byte(`
-	env {
-		name = atlas.env
-		url  = "sqlite://file?_fk=1&cache=shared&mode=memory"
-		migration {
-			dir = "file://migrations"
-		}
-	}`))
-	require.NoError(t, err)
 	c, err := atlasexec.NewClientWithDir(ec.Path(), "atlas")
 	require.NoError(t, err)
+	_, err = c.Apply(context.Background(), &atlasexec.ApplyParams{
+		Env: "test",
+	})
+	require.EqualError(t, err, `atlasexec: required flag "url" not set`)
+	// Set the env var and try again
+	os.Setenv("DB_URL", "sqlite://file?_fk=1&cache=shared&mode=memory")
 	got, err := c.Apply(context.Background(), &atlasexec.ApplyParams{
 		Env: "test",
 	})
