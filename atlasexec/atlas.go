@@ -29,6 +29,7 @@ type (
 		BaselineVersion string
 		TxMode          string
 		Amount          uint64
+		Vars            Vars
 	}
 	// StatusParams are the parameters for the `migrate status` command.
 	StatusParams struct {
@@ -37,6 +38,7 @@ type (
 		DirURL          string
 		URL             string
 		RevisionsSchema string
+		Vars            Vars
 	}
 	// LintParams are the parameters for the `migrate lint` command.
 	LintParams struct {
@@ -68,6 +70,7 @@ type (
 		Format    string
 		Schema    []string
 		URL       string
+		Vars      Vars
 	}
 	Vars map[string]string
 )
@@ -127,6 +130,7 @@ func (c *Client) Apply(ctx context.Context, data *ApplyParams) (*ApplyReport, er
 	if data.Amount > 0 {
 		args = append(args, strconv.FormatUint(data.Amount, 10))
 	}
+	args = append(args, data.Vars.AsArgs()...)
 	return jsonDecode[ApplyReport](c.runCommand(ctx, args))
 }
 
@@ -187,6 +191,7 @@ func (c *Client) SchemaInspect(ctx context.Context, data *SchemaInspectParams) (
 	if len(data.Exclude) > 0 {
 		args = append(args, "--exclude", strings.Join(data.Exclude, ","))
 	}
+	args = append(args, data.Vars.AsArgs()...)
 	return stringVal(c.runCommand(ctx, args))
 }
 
@@ -230,6 +235,7 @@ func (c *Client) Status(ctx context.Context, data *StatusParams) (*StatusReport,
 	if data.RevisionsSchema != "" {
 		args = append(args, "--revisions-schema", data.RevisionsSchema)
 	}
+	args = append(args, data.Vars.AsArgs()...)
 	return jsonDecode[StatusReport](c.runCommand(ctx, args))
 }
 
