@@ -105,7 +105,7 @@ func NewClientWithDir(workingDir, execPath string) (*Client, error) {
 
 // Apply runs the 'migrate apply' command.
 func (c *Client) Apply(ctx context.Context, data *ApplyParams) (*ApplyReport, error) {
-	args := []string{"migrate", "apply", "--log", "{{ json . }}"}
+	args := []string{"migrate", "apply", "--format", "{{ json . }}"}
 	if data.Env != "" {
 		args = append(args, "--env", data.Env)
 	}
@@ -197,7 +197,7 @@ func (c *Client) SchemaInspect(ctx context.Context, data *SchemaInspectParams) (
 
 // Lint runs the 'migrate lint' command.
 func (c *Client) Lint(ctx context.Context, data *LintParams) (*SummaryReport, error) {
-	args := []string{"migrate", "lint", "--log", "{{ json . }}"}
+	args := []string{"migrate", "lint", "--format", "{{ json . }}"}
 	if data.Env != "" {
 		args = append(args, "--env", data.Env)
 	}
@@ -219,7 +219,7 @@ func (c *Client) Lint(ctx context.Context, data *LintParams) (*SummaryReport, er
 
 // Status runs the 'migrate status' command.
 func (c *Client) Status(ctx context.Context, data *StatusParams) (*StatusReport, error) {
-	args := []string{"migrate", "status", "--log", "{{ json . }}"}
+	args := []string{"migrate", "status", "--format", "{{ json . }}"}
 	if data.Env != "" {
 		args = append(args, "--env", data.Env)
 	}
