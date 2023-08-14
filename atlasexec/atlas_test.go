@@ -40,13 +40,14 @@ func Test_MigrateApply(t *testing.T) {
 	})
 	c, err := atlasexec.NewClientWithDir(ec.Path(), "atlas")
 	require.NoError(t, err)
-	_, err = c.Apply(context.Background(), &atlasexec.ApplyParams{
+	got, err := c.Apply(context.Background(), &atlasexec.ApplyParams{
 		Env: "test",
 	})
 	require.EqualError(t, err, `atlasexec: required flag "url" not set`)
+	require.Nil(t, got)
 	// Set the env var and try again
 	os.Setenv("DB_URL", "sqlite://file?_fk=1&cache=shared&mode=memory")
-	got, err := c.Apply(context.Background(), &atlasexec.ApplyParams{
+	got, err = c.Apply(context.Background(), &atlasexec.ApplyParams{
 		Env: "test",
 	})
 	require.NoError(t, err)
