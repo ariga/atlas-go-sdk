@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -344,16 +343,6 @@ func TempFile(content, ext string) (string, func() error, error) {
 	return fmt.Sprintf("file://%s", f.Name()), func() error {
 		return os.Remove(f.Name())
 	}, nil
-}
-
-func execPath(dir, name string) (file string, err error) {
-	file = filepath.Join(dir, name)
-	if _, err = os.Stat(file); err == nil {
-		return file, nil
-	}
-	// If the binary is not in the current directory,
-	// try to find it in the PATH.
-	return exec.LookPath(name)
 }
 
 type cliError struct {
