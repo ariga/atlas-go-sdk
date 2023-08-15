@@ -20,6 +20,27 @@ type (
 	Option func(ce *WorkingDir) error
 )
 
+// WithAtlasHCLString creates the atlas.hcl file with the given string.
+func WithAtlasHCLString(s string) Option {
+	return WithAtlasHCL(func(w io.Writer) error {
+		_, err := w.Write([]byte(s))
+		return err
+	})
+}
+
+// WithAtlasHCLPath creates the atlas.hcl file by copying the file at the given path.
+func WithAtlasHCLPath(path string) Option {
+	return WithAtlasHCL(func(w io.Writer) error {
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		_, err = io.Copy(w, f)
+		return err
+	})
+}
+
 // WithAtlasHCL accept a function to create the atlas.hcl file.
 func WithAtlasHCL(fn func(w io.Writer) error) Option {
 	return func(ce *WorkingDir) error {

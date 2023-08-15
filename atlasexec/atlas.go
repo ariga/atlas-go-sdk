@@ -19,8 +19,8 @@ type (
 		execPath   string
 		workingDir string
 	}
-	// ApplyParams are the parameters for the `migrate apply` command.
-	ApplyParams struct {
+	// MigrateApplyParams are the parameters for the `migrate apply` command.
+	MigrateApplyParams struct {
 		Env             string
 		ConfigURL       string
 		DirURL          string
@@ -31,8 +31,8 @@ type (
 		Amount          uint64
 		Vars            Vars
 	}
-	// StatusParams are the parameters for the `migrate status` command.
-	StatusParams struct {
+	// MigrateStatusParams are the parameters for the `migrate status` command.
+	MigrateStatusParams struct {
 		Env             string
 		ConfigURL       string
 		DirURL          string
@@ -40,8 +40,8 @@ type (
 		RevisionsSchema string
 		Vars            Vars
 	}
-	// LintParams are the parameters for the `migrate lint` command.
-	LintParams struct {
+	// MigrateLintParams are the parameters for the `migrate lint` command.
+	MigrateLintParams struct {
 		Env       string
 		ConfigURL string
 		DevURL    string
@@ -75,19 +75,17 @@ type (
 	Vars map[string]string
 )
 
-// NewClient returns a new Atlas client.
-// The client will try to find the Atlas CLI in the current directory,
-// and in the PATH.
-func NewClient(dir, name string) (*Client, error) {
-	path, err := execPath(dir, name)
-	if err != nil {
-		return nil, err
-	}
-	return NewClientWithDir("", path)
-}
+type (
+	// @deprecated use MigrateApplyParams instead.
+	ApplyParams = MigrateApplyParams
+	// @deprecated use MigrateStatusParams instead.
+	StatusParams = MigrateStatusParams
+	// @deprecated use MigrateLintParams instead.
+	LintParams = MigrateLintParams
+)
 
 // NewClientWD returns a new Atlas client with the given atlas-cli path.
-func NewClientWithDir(workingDir, execPath string) (*Client, error) {
+func NewClient(workingDir, execPath string) (*Client, error) {
 	if execPath == "" {
 		return nil, fmt.Errorf("execPath cannot be empty")
 	}
@@ -104,7 +102,25 @@ func NewClientWithDir(workingDir, execPath string) (*Client, error) {
 }
 
 // Apply runs the 'migrate apply' command.
-func (c *Client) Apply(ctx context.Context, data *ApplyParams) (*ApplyReport, error) {
+// @deprecated use MigrateApply instead.
+func (c *Client) Apply(ctx context.Context, data *MigrateApplyParams) (*MigrateApply, error) {
+	return c.MigrateApply(ctx, data)
+}
+
+// Lint runs the 'migrate lint' command.
+// @deprecated use MigrateLint instead.
+func (c *Client) Lint(ctx context.Context, data *MigrateLintParams) (*SummaryReport, error) {
+	return c.MigrateLint(ctx, data)
+}
+
+// Status runs the 'migrate status' command.
+// @deprecated use MigrateStatus instead.
+func (c *Client) Status(ctx context.Context, data *MigrateStatusParams) (*MigrateStatus, error) {
+	return c.MigrateStatus(ctx, data)
+}
+
+// MigrateApply runs the 'migrate apply' command.
+func (c *Client) MigrateApply(ctx context.Context, data *MigrateApplyParams) (*MigrateApply, error) {
 	args := []string{"migrate", "apply", "--format", "{{ json . }}"}
 	if data.Env != "" {
 		args = append(args, "--env", data.Env)
@@ -131,7 +147,7 @@ func (c *Client) Apply(ctx context.Context, data *ApplyParams) (*ApplyReport, er
 		args = append(args, strconv.FormatUint(data.Amount, 10))
 	}
 	args = append(args, data.Vars.AsArgs()...)
-	return jsonDecode[ApplyReport](c.runCommand(ctx, args))
+	return jsonDecode[MigrateApply](c.runCommand(ctx, args))
 }
 
 // SchemaApply runs the 'schema apply' command.
@@ -195,8 +211,8 @@ func (c *Client) SchemaInspect(ctx context.Context, data *SchemaInspectParams) (
 	return stringVal(c.runCommand(ctx, args))
 }
 
-// Lint runs the 'migrate lint' command.
-func (c *Client) Lint(ctx context.Context, data *LintParams) (*SummaryReport, error) {
+// MigrateLint runs the 'migrate lint' command.
+func (c *Client) MigrateLint(ctx context.Context, data *MigrateLintParams) (*SummaryReport, error) {
 	args := []string{"migrate", "lint", "--format", "{{ json . }}"}
 	if data.Env != "" {
 		args = append(args, "--env", data.Env)
@@ -217,8 +233,8 @@ func (c *Client) Lint(ctx context.Context, data *LintParams) (*SummaryReport, er
 	return jsonDecode[SummaryReport](c.runCommand(ctx, args))
 }
 
-// Status runs the 'migrate status' command.
-func (c *Client) Status(ctx context.Context, data *StatusParams) (*StatusReport, error) {
+// MigrateStatus runs the 'migrate status' command.
+func (c *Client) MigrateStatus(ctx context.Context, data *MigrateStatusParams) (*MigrateStatus, error) {
 	args := []string{"migrate", "status", "--format", "{{ json . }}"}
 	if data.Env != "" {
 		args = append(args, "--env", data.Env)
@@ -236,7 +252,7 @@ func (c *Client) Status(ctx context.Context, data *StatusParams) (*StatusReport,
 		args = append(args, "--revisions-schema", data.RevisionsSchema)
 	}
 	args = append(args, data.Vars.AsArgs()...)
-	return jsonDecode[StatusReport](c.runCommand(ctx, args))
+	return jsonDecode[MigrateStatus](c.runCommand(ctx, args))
 }
 
 // runCommand runs the given command and unmarshals the output into the given
@@ -282,7 +298,7 @@ func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, erro
 }
 
 // LatestVersion returns the latest version of the migrations directory.
-func (r StatusReport) LatestVersion() string {
+func (r MigrateStatus) LatestVersion() string {
 	if l := len(r.Available); l > 0 {
 		return r.Available[l-1].Version
 	}
@@ -297,7 +313,7 @@ func (r StatusReport) LatestVersion() string {
 //
 // If the version is not found, it returns 0 and the second
 // return value is false.
-func (r StatusReport) Amount(version string) (amount uint64, ok bool) {
+func (r MigrateStatus) Amount(version string) (amount uint64, ok bool) {
 	if version == "" {
 		amount := uint64(len(r.Pending))
 		return amount, amount == 0
