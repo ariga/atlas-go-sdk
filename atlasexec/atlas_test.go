@@ -38,16 +38,16 @@ func Test_MigrateApply(t *testing.T) {
 	t.Cleanup(func() {
 		require.NoError(t, ec.Close())
 	})
-	c, err := atlasexec.NewClientWithDir(ec.Path(), "atlas")
+	c, err := atlasexec.NewClient(ec.Path(), "atlas")
 	require.NoError(t, err)
-	got, err := c.Apply(context.Background(), &atlasexec.ApplyParams{
+	got, err := c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
 		Env: "test",
 	})
 	require.EqualError(t, err, `atlasexec: required flag "url" not set`)
 	require.Nil(t, got)
 	// Set the env var and try again
 	os.Setenv("DB_URL", "sqlite://file?_fk=1&cache=shared&mode=memory")
-	got, err = c.Apply(context.Background(), &atlasexec.ApplyParams{
+	got, err = c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
 		Env: "test",
 	})
 	require.NoError(t, err)
@@ -57,7 +57,7 @@ func Test_MigrateApply(t *testing.T) {
 func Test_MigrateStatus(t *testing.T) {
 	type args struct {
 		ctx  context.Context
-		data *atlasexec.StatusParams
+		data *atlasexec.MigrateStatusParams
 	}
 	tests := []struct {
 		name        string
@@ -69,7 +69,7 @@ func Test_MigrateStatus(t *testing.T) {
 		{
 			args: args{
 				ctx: context.Background(),
-				data: &atlasexec.StatusParams{
+				data: &atlasexec.MigrateStatusParams{
 					DirURL: "file://testdata/migrations",
 				},
 			},
@@ -86,7 +86,7 @@ func Test_MigrateStatus(t *testing.T) {
 			dbpath := sqlitedb(t)
 			path := fmt.Sprintf("sqlite://%s", dbpath)
 			tt.args.data.URL = path
-			got, err := c.Status(tt.args.ctx, tt.args.data)
+			got, err := c.MigrateStatus(tt.args.ctx, tt.args.data)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("migrateStatus() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -107,7 +107,7 @@ func Test_SchemaApply(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(f.Name())
 	u := fmt.Sprintf("sqlite://%s?_fk=1", f.Name())
-	c, err := atlasexec.NewClientWithDir(ce.Path(), "atlas")
+	c, err := atlasexec.NewClient(ce.Path(), "atlas")
 	require.NoError(t, err)
 
 	s1 := `

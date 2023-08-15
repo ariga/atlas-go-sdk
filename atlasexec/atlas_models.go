@@ -3,7 +3,7 @@ package atlasexec
 import (
 	"time"
 
-	"ariga.io/atlas/sql/sqlcheck"
+	"ariga.io/atlas/cmd/atlas/x"
 	"ariga.io/atlas/sql/sqlclient"
 )
 
@@ -26,8 +26,8 @@ type (
 			Error string // Error returned by the database.
 		}
 	}
-	// ApplyReport contains a summary of a migration applying attempt on a database.
-	ApplyReport struct {
+	// MigrateApply contains a summary of a migration applying attempt on a database.
+	MigrateApply struct {
 		Pending []File         `json:"Pending,omitempty"` // Pending migration files
 		Applied []*AppliedFile `json:"Applied,omitempty"` // Applied files
 		Current string         `json:"Current,omitempty"` // Current migration version
@@ -38,21 +38,8 @@ type (
 		// but by Atlas, e.g. when committing or rolling back a transaction.
 		Error string `json:"Error,omitempty"`
 	}
-	// A Revision denotes an applied migration in a deployment. Used to track migration executions state of a database.
-	Revision struct {
-		Version         string        `json:"Version"`             // Version of the migration.
-		Description     string        `json:"Description"`         // Description of this migration.
-		Type            string        `json:"Type"`                // Type of the migration.
-		Applied         int           `json:"Applied"`             // Applied amount of statements in the migration.
-		Total           int           `json:"Total"`               // Total amount of statements in the migration.
-		ExecutedAt      time.Time     `json:"ExecutedAt"`          // ExecutedAt is the starting point of execution.
-		ExecutionTime   time.Duration `json:"ExecutionTime"`       // ExecutionTime of the migration.
-		Error           string        `json:"Error,omitempty"`     // Error of the migration, if any occurred.
-		ErrorStmt       string        `json:"ErrorStmt,omitempty"` // ErrorStmt is the statement that raised Error.
-		OperatorVersion string        `json:"OperatorVersion"`     // OperatorVersion that executed this migration.
-	}
-	// StatusReport contains a summary of the migration status of a database.
-	StatusReport struct {
+	// MigrateStatus contains a summary of the migration status of a database.
+	MigrateStatus struct {
 		Available []File      `json:"Available,omitempty"` // Available migration files
 		Pending   []File      `json:"Pending,omitempty"`   // Pending migration files
 		Applied   []*Revision `json:"Applied,omitempty"`   // Applied migration files
@@ -64,33 +51,9 @@ type (
 		Error     string      `json:"Error,omitempty"`     // Last Error that occurred
 		SQL       string      `json:"SQL,omitempty"`       // SQL that caused the last Error
 	}
-	// FileReport contains a summary of the analysis of a single file.
-	FileReport struct {
-		Name    string            `json:"Name,omitempty"`    // Name of the file.
-		Text    string            `json:"Text,omitempty"`    // Contents of the file.
-		Reports []sqlcheck.Report `json:"Reports,omitempty"` // List of reports.
-		Error   string            `json:"Error,omitempty"`   // File specific error.
-	}
 	// A SummaryReport contains a summary of the analysis of all files.
 	// It is used as an input to templates to report the CI results.
-	SummaryReport struct {
-		// Steps of the analysis. Added in verbose mode.
-		Steps []struct {
-			Name   string `json:"Name,omitempty"`   // Step name.
-			Text   string `json:"Text,omitempty"`   // Step description.
-			Error  string `json:"Error,omitempty"`  // Error that cause the execution to halt.
-			Result any    `json:"Result,omitempty"` // Result of the step. For example, a diagnostic.
-		}
-
-		// Schema versions found by the runner.
-		Schema struct {
-			Current string `json:"Current,omitempty"` // Current schema.
-			Desired string `json:"Desired,omitempty"` // Desired schema.
-		}
-
-		// Files reports. Non-empty in case there are findings.
-		Files []*FileReport `json:"Files,omitempty"`
-	}
+	SummaryReport = x.SummaryReport
 	// StmtError groups a statement with its execution error.
 	StmtError struct {
 		Stmt string `json:"Stmt,omitempty"` // SQL statement that failed.
@@ -116,4 +79,24 @@ type (
 		// e.g., when committing or rolling back a transaction.
 		Error string `json:"Error,omitempty"`
 	}
+	// A Revision denotes an applied migration in a deployment. Used to track migration executions state of a database.
+	Revision struct {
+		Version         string        `json:"Version"`             // Version of the migration.
+		Description     string        `json:"Description"`         // Description of this migration.
+		Type            string        `json:"Type"`                // Type of the migration.
+		Applied         int           `json:"Applied"`             // Applied amount of statements in the migration.
+		Total           int           `json:"Total"`               // Total amount of statements in the migration.
+		ExecutedAt      time.Time     `json:"ExecutedAt"`          // ExecutedAt is the starting point of execution.
+		ExecutionTime   time.Duration `json:"ExecutionTime"`       // ExecutionTime of the migration.
+		Error           string        `json:"Error,omitempty"`     // Error of the migration, if any occurred.
+		ErrorStmt       string        `json:"ErrorStmt,omitempty"` // ErrorStmt is the statement that raised Error.
+		OperatorVersion string        `json:"OperatorVersion"`     // OperatorVersion that executed this migration.
+	}
+)
+
+type (
+	// @deprecated use MigrateStatus instead
+	StatusReport = MigrateStatus
+	// @deprecated use MigrateApply instead
+	ApplyReport = MigrateApply
 )
