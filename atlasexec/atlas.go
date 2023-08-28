@@ -23,6 +23,17 @@ type (
 	LoginParams struct {
 		Token string
 	}
+	// MigratePushParams are the parameters for the `migrate push` command.
+	MigratePushParams struct {
+		Name        string
+		Tag         string
+		DevURL      string
+		DirURL      string
+		LockTimeout string
+		ConfigURL   string
+		Env         string
+		Vars        Vars
+	}
 	// MigrateApplyParams are the parameters for the `migrate apply` command.
 	MigrateApplyParams struct {
 		Env             string
@@ -136,6 +147,36 @@ func (c *Client) Login(ctx context.Context, params *LoginParams) error {
 func (c *Client) Logout(ctx context.Context) error {
 	_, err := c.runCommand(ctx, []string{"logout"})
 	return err
+}
+
+// MigratePush runs the 'migrate push' command.
+func (c *Client) MigratePush(ctx context.Context, params *MigratePushParams) (string, error) {
+	args := []string{"migrate", "push"}
+	if params.DevURL != "" {
+		args = append(args, "--dev-url", params.DevURL)
+	}
+	if params.DirURL != "" {
+		args = append(args, "--dir", params.DirURL)
+	}
+	if params.LockTimeout != "" {
+		args = append(args, "--lock-timeout", params.LockTimeout)
+	}
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
+	}
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
+	}
+	args = append(args, params.Vars.AsArgs()...)
+	if params.Name == "" {
+		return "", errors.New("directory name cannot be empty")
+	}
+	if params.Tag != "" {
+		args = append(args, fmt.Sprintf("%s:%s", params.Name, params.Tag))
+	} else {
+		args = append(args, params.Name)
+	}
+	return stringVal(c.runCommand(ctx, args))
 }
 
 // MigrateApply runs the 'migrate apply' command.
