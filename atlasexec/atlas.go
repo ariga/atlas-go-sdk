@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -17,6 +18,10 @@ type (
 	Client struct {
 		execPath   string
 		workingDir string
+	}
+	// LoginParams are the parameters for the `login` command.
+	LoginParams struct {
+		Token string
 	}
 	// MigrateApplyParams are the parameters for the `migrate apply` command.
 	MigrateApplyParams struct {
@@ -83,7 +88,7 @@ type (
 	LintParams = MigrateLintParams
 )
 
-// NewClientWD returns a new Atlas client with the given atlas-cli path.
+// NewClient returns a new Atlas client with the given atlas-cli path.
 func NewClient(workingDir, execPath string) (*Client, error) {
 	if execPath == "" {
 		return nil, fmt.Errorf("execPath cannot be empty")
@@ -116,6 +121,21 @@ func (c *Client) Lint(ctx context.Context, data *MigrateLintParams) (*SummaryRep
 // @deprecated use MigrateStatus instead.
 func (c *Client) Status(ctx context.Context, data *MigrateStatusParams) (*MigrateStatus, error) {
 	return c.MigrateStatus(ctx, data)
+}
+
+// Login runs the 'login' command.
+func (c *Client) Login(ctx context.Context, data *LoginParams) error {
+	if data.Token == "" {
+		return errors.New("token cannot be empty")
+	}
+	_, err := c.runCommand(ctx, []string{"login", "--token", data.Token})
+	return err
+}
+
+// Logout runs the 'logout' command.
+func (c *Client) Logout(ctx context.Context) error {
+	_, err := c.runCommand(ctx, []string{"logout"})
+	return err
 }
 
 // MigrateApply runs the 'migrate apply' command.
