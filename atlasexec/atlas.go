@@ -107,28 +107,28 @@ func NewClient(workingDir, execPath string) (*Client, error) {
 
 // Apply runs the 'migrate apply' command.
 // @deprecated use MigrateApply instead.
-func (c *Client) Apply(ctx context.Context, data *MigrateApplyParams) (*MigrateApply, error) {
-	return c.MigrateApply(ctx, data)
+func (c *Client) Apply(ctx context.Context, params *MigrateApplyParams) (*MigrateApply, error) {
+	return c.MigrateApply(ctx, params)
 }
 
 // Lint runs the 'migrate lint' command.
 // @deprecated use MigrateLint instead.
-func (c *Client) Lint(ctx context.Context, data *MigrateLintParams) (*SummaryReport, error) {
-	return c.MigrateLint(ctx, data)
+func (c *Client) Lint(ctx context.Context, params *MigrateLintParams) (*SummaryReport, error) {
+	return c.MigrateLint(ctx, params)
 }
 
 // Status runs the 'migrate status' command.
 // @deprecated use MigrateStatus instead.
-func (c *Client) Status(ctx context.Context, data *MigrateStatusParams) (*MigrateStatus, error) {
-	return c.MigrateStatus(ctx, data)
+func (c *Client) Status(ctx context.Context, params *MigrateStatusParams) (*MigrateStatus, error) {
+	return c.MigrateStatus(ctx, params)
 }
 
 // Login runs the 'login' command.
-func (c *Client) Login(ctx context.Context, data *LoginParams) error {
-	if data.Token == "" {
+func (c *Client) Login(ctx context.Context, params *LoginParams) error {
+	if params.Token == "" {
 		return errors.New("token cannot be empty")
 	}
-	_, err := c.runCommand(ctx, []string{"login", "--token", data.Token})
+	_, err := c.runCommand(ctx, []string{"login", "--token", params.Token})
 	return err
 }
 
@@ -139,138 +139,138 @@ func (c *Client) Logout(ctx context.Context) error {
 }
 
 // MigrateApply runs the 'migrate apply' command.
-func (c *Client) MigrateApply(ctx context.Context, data *MigrateApplyParams) (*MigrateApply, error) {
+func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (*MigrateApply, error) {
 	args := []string{"migrate", "apply", "--format", "{{ json . }}"}
-	if data.Env != "" {
-		args = append(args, "--env", data.Env)
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
 	}
-	if data.ConfigURL != "" {
-		args = append(args, "--config", data.ConfigURL)
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
 	}
-	if data.URL != "" {
-		args = append(args, "--url", data.URL)
+	if params.URL != "" {
+		args = append(args, "--url", params.URL)
 	}
-	if data.DirURL != "" {
-		args = append(args, "--dir", data.DirURL)
+	if params.DirURL != "" {
+		args = append(args, "--dir", params.DirURL)
 	}
-	if data.RevisionsSchema != "" {
-		args = append(args, "--revisions-schema", data.RevisionsSchema)
+	if params.RevisionsSchema != "" {
+		args = append(args, "--revisions-schema", params.RevisionsSchema)
 	}
-	if data.BaselineVersion != "" {
-		args = append(args, "--baseline", data.BaselineVersion)
+	if params.BaselineVersion != "" {
+		args = append(args, "--baseline", params.BaselineVersion)
 	}
-	if data.TxMode != "" {
-		args = append(args, "--tx-mode", data.TxMode)
+	if params.TxMode != "" {
+		args = append(args, "--tx-mode", params.TxMode)
 	}
-	if data.Amount > 0 {
-		args = append(args, strconv.FormatUint(data.Amount, 10))
+	if params.Amount > 0 {
+		args = append(args, strconv.FormatUint(params.Amount, 10))
 	}
-	args = append(args, data.Vars.AsArgs()...)
+	args = append(args, params.Vars.AsArgs()...)
 	return jsonDecode[MigrateApply](c.runCommand(ctx, args))
 }
 
 // SchemaApply runs the 'schema apply' command.
-func (c *Client) SchemaApply(ctx context.Context, data *SchemaApplyParams) (*SchemaApply, error) {
+func (c *Client) SchemaApply(ctx context.Context, params *SchemaApplyParams) (*SchemaApply, error) {
 	args := []string{"schema", "apply", "--format", "{{ json . }}"}
-	if data.Env != "" {
-		args = append(args, "--env", data.Env)
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
 	}
-	if data.ConfigURL != "" {
-		args = append(args, "--config", data.ConfigURL)
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
 	}
-	if data.URL != "" {
-		args = append(args, "--url", data.URL)
+	if params.URL != "" {
+		args = append(args, "--url", params.URL)
 	}
-	if data.To != "" {
-		args = append(args, "--to", data.To)
+	if params.To != "" {
+		args = append(args, "--to", params.To)
 	}
-	if data.DryRun {
+	if params.DryRun {
 		args = append(args, "--dry-run")
 	} else {
 		args = append(args, "--auto-approve")
 	}
-	if data.DevURL != "" {
-		args = append(args, "--dev-url", data.DevURL)
+	if params.DevURL != "" {
+		args = append(args, "--dev-url", params.DevURL)
 	}
-	if len(data.Schema) > 0 {
-		args = append(args, "--schema", strings.Join(data.Schema, ","))
+	if len(params.Schema) > 0 {
+		args = append(args, "--schema", strings.Join(params.Schema, ","))
 	}
-	if len(data.Exclude) > 0 {
-		args = append(args, "--exclude", strings.Join(data.Exclude, ","))
+	if len(params.Exclude) > 0 {
+		args = append(args, "--exclude", strings.Join(params.Exclude, ","))
 	}
-	args = append(args, data.Vars.AsArgs()...)
+	args = append(args, params.Vars.AsArgs()...)
 	return jsonDecode[SchemaApply](c.runCommand(ctx, args))
 }
 
 // SchemaInspect runs the 'schema inspect' command.
-func (c *Client) SchemaInspect(ctx context.Context, data *SchemaInspectParams) (string, error) {
+func (c *Client) SchemaInspect(ctx context.Context, params *SchemaInspectParams) (string, error) {
 	args := []string{"schema", "inspect"}
-	if data.Env != "" {
-		args = append(args, "--env", data.Env)
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
 	}
-	if data.ConfigURL != "" {
-		args = append(args, "--config", data.ConfigURL)
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
 	}
-	if data.URL != "" {
-		args = append(args, "--url", data.URL)
+	if params.URL != "" {
+		args = append(args, "--url", params.URL)
 	}
-	if data.DevURL != "" {
-		args = append(args, "--dev-url", data.DevURL)
+	if params.DevURL != "" {
+		args = append(args, "--dev-url", params.DevURL)
 	}
-	if data.Format == "sql" {
+	if params.Format == "sql" {
 		args = append(args, "--format", "{{ sql . }}")
 	}
-	if len(data.Schema) > 0 {
-		args = append(args, "--schema", strings.Join(data.Schema, ","))
+	if len(params.Schema) > 0 {
+		args = append(args, "--schema", strings.Join(params.Schema, ","))
 	}
-	if len(data.Exclude) > 0 {
-		args = append(args, "--exclude", strings.Join(data.Exclude, ","))
+	if len(params.Exclude) > 0 {
+		args = append(args, "--exclude", strings.Join(params.Exclude, ","))
 	}
-	args = append(args, data.Vars.AsArgs()...)
+	args = append(args, params.Vars.AsArgs()...)
 	return stringVal(c.runCommand(ctx, args))
 }
 
 // MigrateLint runs the 'migrate lint' command.
-func (c *Client) MigrateLint(ctx context.Context, data *MigrateLintParams) (*SummaryReport, error) {
+func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*SummaryReport, error) {
 	args := []string{"migrate", "lint", "--format", "{{ json . }}"}
-	if data.Env != "" {
-		args = append(args, "--env", data.Env)
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
 	}
-	if data.ConfigURL != "" {
-		args = append(args, "--config", data.ConfigURL)
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
 	}
-	if data.DevURL != "" {
-		args = append(args, "--dev-url", data.DevURL)
+	if params.DevURL != "" {
+		args = append(args, "--dev-url", params.DevURL)
 	}
-	if data.DirURL != "" {
-		args = append(args, "--dir", data.DirURL)
+	if params.DirURL != "" {
+		args = append(args, "--dir", params.DirURL)
 	}
-	if data.Latest > 0 {
-		args = append(args, "--latest", strconv.FormatUint(data.Latest, 10))
+	if params.Latest > 0 {
+		args = append(args, "--latest", strconv.FormatUint(params.Latest, 10))
 	}
-	args = append(args, data.Vars.AsArgs()...)
+	args = append(args, params.Vars.AsArgs()...)
 	return jsonDecode[SummaryReport](c.runCommand(ctx, args))
 }
 
 // MigrateStatus runs the 'migrate status' command.
-func (c *Client) MigrateStatus(ctx context.Context, data *MigrateStatusParams) (*MigrateStatus, error) {
+func (c *Client) MigrateStatus(ctx context.Context, params *MigrateStatusParams) (*MigrateStatus, error) {
 	args := []string{"migrate", "status", "--format", "{{ json . }}"}
-	if data.Env != "" {
-		args = append(args, "--env", data.Env)
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
 	}
-	if data.ConfigURL != "" {
-		args = append(args, "--config", data.ConfigURL)
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
 	}
-	if data.URL != "" {
-		args = append(args, "--url", data.URL)
+	if params.URL != "" {
+		args = append(args, "--url", params.URL)
 	}
-	if data.DirURL != "" {
-		args = append(args, "--dir", data.DirURL)
+	if params.DirURL != "" {
+		args = append(args, "--dir", params.DirURL)
 	}
-	if data.RevisionsSchema != "" {
-		args = append(args, "--revisions-schema", data.RevisionsSchema)
+	if params.RevisionsSchema != "" {
+		args = append(args, "--revisions-schema", params.RevisionsSchema)
 	}
-	args = append(args, data.Vars.AsArgs()...)
+	args = append(args, params.Vars.AsArgs()...)
 	return jsonDecode[MigrateStatus](c.runCommand(ctx, args))
 }
 
