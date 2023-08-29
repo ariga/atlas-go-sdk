@@ -241,6 +241,11 @@ func (c *Client) runCommand(ctx context.Context, args []string, report interface
 		// When the exit code is 1, it means that the command
 		// was executed successfully, and the output is a JSON
 	}
+	// Ignore the error thrown when there is nothing to do
+	if strings.TrimSpace(string(output)) == "No migration files to execute" {
+		return string(output), nil
+	}
+
 	if report != nil {
 		if err := json.Unmarshal(output, report); err != nil {
 			return string(output), fmt.Errorf("atlas: unable to decode the report %w", err)
