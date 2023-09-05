@@ -93,11 +93,11 @@ type (
 )
 
 type (
-	// @deprecated use MigrateApplyParams instead.
+	// Deprecated: MigrateApplyParams instead.
 	ApplyParams = MigrateApplyParams
-	// @deprecated use MigrateStatusParams instead.
+	// Deprecated: use MigrateStatusParams instead.
 	StatusParams = MigrateStatusParams
-	// @deprecated use MigrateLintParams instead.
+	// Deprecated: use MigrateLintParams instead.
 	LintParams = MigrateLintParams
 )
 
@@ -365,7 +365,7 @@ func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, erro
 	return &stdout, nil
 }
 
-// LatestVersion returns the latest version of the migrations directory.
+// LatestVersion returns the latest version of the migration directory.
 func (r MigrateStatus) LatestVersion() string {
 	if l := len(r.Available); l > 0 {
 		return r.Available[l-1].Version
