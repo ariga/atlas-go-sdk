@@ -95,8 +95,8 @@ type (
 )
 
 type (
-	// @deprecated use MigrateStatus instead
+	// Deprecated: use MigrateStatus instead
 	StatusReport = MigrateStatus
-	// @deprecated use MigrateApply instead
+	// Deprecated: use MigrateApply instead
 	ApplyReport = MigrateApply
 )
