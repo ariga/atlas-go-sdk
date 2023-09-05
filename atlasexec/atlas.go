@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -119,19 +120,19 @@ func NewClient(workingDir, execPath string) (*Client, error) {
 }
 
 // Apply runs the 'migrate apply' command.
-// @deprecated use MigrateApply instead.
+// Deprecated: use MigrateApply instead.
 func (c *Client) Apply(ctx context.Context, params *MigrateApplyParams) (*MigrateApply, error) {
 	return c.MigrateApply(ctx, params)
 }
 
 // Lint runs the 'migrate lint' command.
-// @deprecated use MigrateLint instead.
+// Deprecated: use MigrateLint instead.
 func (c *Client) Lint(ctx context.Context, params *MigrateLintParams) (*SummaryReport, error) {
 	return c.MigrateLint(ctx, params)
 }
 
 // Status runs the 'migrate status' command.
-// @deprecated use MigrateStatus instead.
+// Deprecated: use MigrateStatus instead.
 func (c *Client) Status(ctx context.Context, params *MigrateStatusParams) (*MigrateStatus, error) {
 	return c.MigrateStatus(ctx, params)
 }
@@ -141,7 +142,7 @@ func (c *Client) Login(ctx context.Context, params *LoginParams) error {
 	if params.Token == "" {
 		return errors.New("token cannot be empty")
 	}
-	_, err := c.runCommand(ctx, []string{"login", "--token", params.Token})
+	_, err := c.runCommand(ctx, []string{"login", "--token", params.Token}, validJSON)
 	return err
 }
 
@@ -184,7 +185,7 @@ func (c *Client) MigratePush(ctx context.Context, params *MigratePushParams) (st
 	} else {
 		args = append(args, params.Name)
 	}
-	return stringVal(c.runCommand(ctx, args))
+	return stringVal(c.runCommand(ctx, args, validJSON))
 }
 
 // MigrateApply runs the 'migrate apply' command.
@@ -215,7 +216,7 @@ func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (
 		args = append(args, strconv.FormatUint(params.Amount, 10))
 	}
 	args = append(args, params.Vars.AsArgs()...)
-	return jsonDecode[MigrateApply](c.runCommand(ctx, args))
+	return jsonDecode[MigrateApply](c.runCommand(ctx, args, validJSON))
 }
 
 // SchemaApply runs the 'schema apply' command.
@@ -248,7 +249,7 @@ func (c *Client) SchemaApply(ctx context.Context, params *SchemaApplyParams) (*S
 		args = append(args, "--exclude", strings.Join(params.Exclude, ","))
 	}
 	args = append(args, params.Vars.AsArgs()...)
-	return jsonDecode[SchemaApply](c.runCommand(ctx, args))
+	return jsonDecode[SchemaApply](c.runCommand(ctx, args, validJSON))
 }
 
 // SchemaInspect runs the 'schema inspect' command.
@@ -298,7 +299,7 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 		args = append(args, "--latest", strconv.FormatUint(params.Latest, 10))
 	}
 	args = append(args, params.Vars.AsArgs()...)
-	return jsonDecode[SummaryReport](c.runCommand(ctx, args))
+	return jsonDecode[SummaryReport](c.runCommand(ctx, args, validJSON))
 }
 
 // MigrateStatus runs the 'migrate status' command.
@@ -320,12 +321,38 @@ func (c *Client) MigrateStatus(ctx context.Context, params *MigrateStatusParams)
 		args = append(args, "--revisions-schema", params.RevisionsSchema)
 	}
 	args = append(args, params.Vars.AsArgs()...)
-	return jsonDecode[MigrateStatus](c.runCommand(ctx, args))
+	return jsonDecode[MigrateStatus](c.runCommand(ctx, args, validJSON))
 }
 
-// runCommand runs the given command and unmarshals the output into the given
-// interface.
-func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, error) {
+var reVersion = regexp.MustCompile(`^atlas version v(\d+\.\d+.\d+)-?([a-z0-9]*)?`)
+
+// Version runs the 'version' command.
+func (c *Client) Version(ctx context.Context) (*Version, error) {
+	r, err := c.runCommand(ctx, []string{"version"})
+	if err != nil {
+		return nil, err
+	}
+	out, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	v := reVersion.FindSubmatch(out)
+	if v == nil {
+		return nil, errors.New("unexpected output format")
+	}
+	var sha string
+	if len(v) > 2 {
+		sha = string(v[2])
+	}
+	return &Version{
+		Version: string(v[1]),
+		SHA:     sha,
+		Canary:  strings.Contains(string(out), "canary"),
+	}, nil
+}
+
+// runCommand runs the given command and returns its output.
+func (c *Client) runCommand(ctx context.Context, args []string, vs ...validator) (io.Reader, error) {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, c.execPath, args...)
 	cmd.Dir = c.workingDir
@@ -343,13 +370,6 @@ func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, erro
 				summary: strings.TrimSpace(stderr.String()),
 				detail:  strings.TrimSpace(stdout.String()),
 			}
-		case !json.Valid(stdout.Bytes()):
-			// When the output is not valid JSON, it means that
-			// the command failed.
-			return nil, &cliError{
-				summary: "Atlas CLI",
-				detail:  strings.TrimSpace(stdout.String()),
-			}
 		case cmd.ProcessState.ExitCode() == 1:
 			// When the exit code is 1, it means that the command
 			// failed but the output is still valid JSON.
@@ -359,6 +379,12 @@ func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, erro
 		default:
 			// When the exit code is not 1, it means that the
 			// command wasn't executed successfully.
+			return nil, err
+		}
+	}
+	out := stdout.Bytes()
+	for _, v := range vs {
+		if err := v(out); err != nil {
 			return nil, err
 		}
 	}
@@ -469,4 +495,16 @@ func jsonDecode[T any](r io.Reader, err error) (*T, error) {
 		return nil, err
 	}
 	return &dst, nil
+}
+
+type validator func([]byte) error
+
+func validJSON(d []byte) error {
+	if !json.Valid(d) {
+		return &cliError{
+			summary: "Atlas CLI",
+			detail:  strings.TrimSpace(string(d)),
+		}
+	}
+	return nil
 }
