@@ -92,6 +92,12 @@ type (
 		ErrorStmt       string        `json:"ErrorStmt,omitempty"` // ErrorStmt is the statement that raised Error.
 		OperatorVersion string        `json:"OperatorVersion"`     // OperatorVersion that executed this migration.
 	}
+	// Version contains the result of an 'atlas version' run.
+	Version struct {
+		Version string `json:"Version"`
+		SHA     string `json:"SHA,omitempty"`
+		Canary  bool   `json:"Canary,omitempty"`
+	}
 )
 
 type (

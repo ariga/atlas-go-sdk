@@ -195,6 +195,45 @@ schema "main" {
 `, s)
 }
 
+func TestVersion(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
+	require.NoError(t, err)
+
+	for _, tt := range []struct {
+		env    string
+		expect *atlasexec.Version
+	}{
+		{
+			env:    "",
+			expect: &atlasexec.Version{Version: "1.2.3"},
+		},
+		{
+			env: "v0.14.1-abcdef-canary",
+			expect: &atlasexec.Version{
+				Version: "0.14.1",
+				SHA:     "abcdef",
+				Canary:  true,
+			},
+		},
+		{
+			env: "v11.22.33-sha",
+			expect: &atlasexec.Version{
+				Version: "11.22.33",
+				SHA:     "sha",
+			},
+		},
+	} {
+		t.Run(tt.env, func(t *testing.T) {
+			t.Setenv("TEST_ATLAS_VERSION", tt.env)
+			v, err := c.Version(context.Background())
+			require.NoError(t, err)
+			require.Equal(t, tt.expect, v)
+		})
+	}
+}
+
 func sqlitedb(t *testing.T) string {
 	td := t.TempDir()
 	dbpath := filepath.Join(td, "file.db")
