@@ -483,7 +483,7 @@ func stringVal(r io.Reader, err error) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(s), nil
+	return strings.TrimSpace(string(s)), nil
 }
 
 func jsonDecode[T any](r io.Reader, err error) (*T, error) {

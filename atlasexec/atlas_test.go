@@ -191,8 +191,7 @@ table "blog_posts" {
   }
 }
 schema "main" {
-}
-`, s)
+}`, s)
 }
 
 func TestVersion(t *testing.T) {
