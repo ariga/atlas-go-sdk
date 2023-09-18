@@ -185,7 +185,8 @@ func (c *Client) MigratePush(ctx context.Context, params *MigratePushParams) (st
 	} else {
 		args = append(args, params.Name)
 	}
-	return stringVal(c.runCommand(ctx, args, validJSON))
+	resp, err := stringVal(c.runCommand(ctx, args, validJSON))
+	return strings.TrimSpace(resp), err
 }
 
 // MigrateApply runs the 'migrate apply' command.
