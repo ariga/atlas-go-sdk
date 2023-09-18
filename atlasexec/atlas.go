@@ -142,7 +142,7 @@ func (c *Client) Login(ctx context.Context, params *LoginParams) error {
 	if params.Token == "" {
 		return errors.New("token cannot be empty")
 	}
-	_, err := c.runCommand(ctx, []string{"login", "--token", params.Token}, validJSON)
+	_, err := c.runCommand(ctx, []string{"login", "--token", params.Token})
 	return err
 }
 
@@ -185,7 +185,7 @@ func (c *Client) MigratePush(ctx context.Context, params *MigratePushParams) (st
 	} else {
 		args = append(args, params.Name)
 	}
-	resp, err := stringVal(c.runCommand(ctx, args, validJSON))
+	resp, err := stringVal(c.runCommand(ctx, args))
 	return strings.TrimSpace(resp), err
 }
 
