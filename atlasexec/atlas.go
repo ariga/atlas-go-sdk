@@ -185,7 +185,8 @@ func (c *Client) MigratePush(ctx context.Context, params *MigratePushParams) (st
 	} else {
 		args = append(args, params.Name)
 	}
-	return stringVal(c.runCommand(ctx, args, validJSON))
+	resp, err := stringVal(c.runCommand(ctx, args, validJSON))
+	return strings.TrimSpace(resp), err
 }
 
 // MigrateApply runs the 'migrate apply' command.
@@ -483,7 +484,7 @@ func stringVal(r io.Reader, err error) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSpace(string(s)), nil
+	return string(s), nil
 }
 
 func jsonDecode[T any](r io.Reader, err error) (*T, error) {
