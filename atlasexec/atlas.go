@@ -68,6 +68,7 @@ type (
 		Latest    uint64
 		Vars      Vars
 		Writer    io.Writer
+		Base      string
 	}
 	// SchemaApplyParams are the parameters for the `schema apply` command.
 	SchemaApplyParams struct {
@@ -301,6 +302,9 @@ func lintArgs(params *MigrateLintParams) []string {
 	}
 	if params.DirURL != "" {
 		args = append(args, "--dir", params.DirURL)
+	}
+	if params.Base != "" {
+		args = append(args, "--base", params.Base)
 	}
 	if params.Latest > 0 {
 		args = append(args, "--latest", strconv.FormatUint(params.Latest, 10))

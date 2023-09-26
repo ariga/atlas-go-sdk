@@ -1,9 +1,11 @@
 package atlasexec_test
 
 import (
+	"ariga.io/atlas/sql/migrate"
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -134,6 +136,19 @@ func TestMigrateLint(t *testing.T) {
 		var raw json.RawMessage
 		require.NoError(t, json.NewDecoder(&buf).Decode(&raw))
 	})
+	t.Run("lint uses --base and --latest", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		summary, err := c.MigrateLint(context.Background(), &atlasexec.MigrateLintParams{
+			DevURL: "sqlite://file?mode=memory",
+			DirURL: "file://testdata/migrations",
+
+			Latest: 1,
+			Base:   "atlas://test-dir",
+		})
+		require.ErrorContains(t, err, "--latest, --git-base, and --base are mutually exclusive")
+		require.Nil(t, summary)
+	})
 }
 
 func TestMigrateLintWithLogin(t *testing.T) {
@@ -141,13 +156,38 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		Query     string          `json:"query"`
 		Variables json.RawMessage `json:"variables"`
 	}
+	type Dir struct {
+		Name    string `json:"name"`
+		Content string `json:"content"`
+		Slug    string `json:"slug"`
+	}
+	type dirsQueryResponse struct {
+		Data struct {
+			Dirs []Dir `json:"dirs"`
+		} `json:"data"`
+	}
 	token := "123456789"
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "Bearer "+token, r.Header.Get("Authorization"))
 		var query graphQLQuery
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&query))
-		if strings.Contains(query.Query, "mutation reportMigrationLint") {
-			_, _ = fmt.Fprint(w, `{ "data": { "reportMigrationLint": { "url": "https://migration-lint-report-url" } } }`)
+		switch {
+		case strings.Contains(query.Query, "mutation reportMigrationLint"):
+			_, _ = fmt.Fprintf(w, `{ "data": { "reportMigrationLint": { "url": "https://migration-lint-report-url" } } }`)
+		case strings.Contains(query.Query, "query dirs"):
+			dir, err := migrate.NewLocalDir("./testdata/migrations")
+			require.NoError(t, err)
+			ad, err := migrate.ArchiveDir(dir)
+			require.NoError(t, err)
+			var resp dirsQueryResponse
+			resp.Data.Dirs = []Dir{{
+				Name:    "test-dir-name",
+				Slug:    "test-dir-slug",
+				Content: base64.StdEncoding.EncodeToString(ad),
+			}}
+			st2bytes, err := json.Marshal(resp)
+			require.NoError(t, err)
+			_, _ = fmt.Fprint(w, string(st2bytes))
 		}
 	}))
 	t.Cleanup(srv.Close)
@@ -185,6 +225,19 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		}))
 		require.Equal(t, strings.TrimSpace(buf.String()), "https://migration-lint-report-url")
 	})
+	t.Run("lint uses --base", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		summary, err := c.MigrateLint(context.Background(), &atlasexec.MigrateLintParams{
+			DevURL: "sqlite://file?mode=memory",
+			DirURL: "file://testdata/migrations",
+
+			ConfigURL: atlasConfigURL,
+			Base:      "atlas://test-dir-slug",
+		})
+		require.NoError(t, err)
+		require.NotNil(t, summary)
+	})
 }
 
 func generateHCL(t *testing.T, url, token string) string {
@@ -213,6 +266,18 @@ func generateHCL(t *testing.T, url, token string) string {
 		require.NoError(t, clean())
 	})
 	return atlasConfigURL
+}
+
+func testDir(t *testing.T, path string) (d migrate.MemDir) {
+	rd, err := os.ReadDir(path)
+	require.NoError(t, err)
+	for _, f := range rd {
+		fp := filepath.Join(path, f.Name())
+		b, err := os.ReadFile(fp)
+		require.NoError(t, err)
+		require.NoError(t, d.WriteFile(f.Name(), b))
+	}
+	return d
 }
 
 func Test_MigrateStatus(t *testing.T) {
