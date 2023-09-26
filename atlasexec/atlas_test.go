@@ -1,12 +1,21 @@
 package atlasexec_test
 
 import (
+	"ariga.io/atlas/cmd/atlas/x"
+	"ariga.io/atlas/sql/migrate"
+	"ariga.io/atlas/sql/sqlcheck"
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -51,7 +60,192 @@ func Test_MigrateApply(t *testing.T) {
 		Env: "test",
 	})
 	require.NoError(t, err)
-	require.EqualValues(t, "20230727105615", got.Target)
+	require.EqualValues(t, "20230926085734", got.Target)
+}
+
+func TestMigrateLint(t *testing.T) {
+	t.Run("with broken config", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		got, err := c.MigrateLint(context.Background(), &atlasexec.MigrateLintParams{
+			ConfigURL: "file://config-broken.hcl",
+		})
+		require.ErrorContains(t, err, `project file "config-broken.hcl" was not found`)
+		require.Nil(t, got)
+	})
+	t.Run("with broken dev-url", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		got, err := c.MigrateLint(context.Background(), &atlasexec.MigrateLintParams{
+			DirURL: "file://atlasexec/testdata/migrations",
+		})
+		require.ErrorContains(t, err, `required flag(s) "dev-url" not set`)
+		require.Nil(t, got)
+	})
+	t.Run("broken dir", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		got, err := c.MigrateLint(context.Background(), &atlasexec.MigrateLintParams{
+			DevURL: "sqlite://file?mode=memory",
+			DirURL: "file://atlasexec/testdata/doesnotexist",
+		})
+		require.ErrorContains(t, err, `stat atlasexec/testdata/doesnotexist: no such file or directory`)
+		require.Nil(t, got)
+	})
+	t.Run("lint error parsing", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		got, err := c.MigrateLint(context.Background(), &atlasexec.MigrateLintParams{
+			DevURL: "sqlite://file?mode=memory",
+			DirURL: "file://testdata/migrations",
+			Latest: 1,
+		})
+		require.NoError(t, err)
+		require.GreaterOrEqual(t, 4, len(got.Steps))
+		require.Equal(t, "sqlite3", got.Env.Driver)
+		require.Equal(t, "testdata/migrations", got.Env.Dir)
+		require.Equal(t, "sqlite://file?mode=memory", got.Env.URL.String())
+		require.Equal(t, 1, len(got.Files))
+		expectedReport := &x.FileReport{
+			Name: "20230926085734_destructive-change.sql",
+			Text: "DROP TABLE t2;\n",
+			Reports: []sqlcheck.Report{{
+				Text: "destructive changes detected",
+				Diagnostics: []sqlcheck.Diagnostic{{
+					Pos:  0,
+					Text: `Dropping table "t2"`,
+					Code: "DS102",
+				}},
+			}},
+			Error: "destructive changes detected",
+		}
+		require.EqualValues(t, expectedReport, got.Files[0])
+	})
+	t.Run("lint with manually parsing output", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		var buf bytes.Buffer
+		err = c.MigrateLintError(context.Background(), &atlasexec.MigrateLintParams{
+			DevURL: "sqlite://file?mode=memory",
+			DirURL: "file://testdata/migrations",
+			Latest: 1,
+			Writer: &buf,
+		})
+		require.NoError(t, err)
+		var raw json.RawMessage
+		require.NoError(t, json.NewDecoder(&buf).Decode(&raw))
+	})
+}
+
+type graphQLQuery struct {
+	Query     string          `json:"query"`
+	Variables json.RawMessage `json:"variables"`
+}
+
+type Dir struct {
+	Name    string `json:"name"`
+	Content string `json:"content"`
+}
+type dirsQueryResponse struct {
+	Data struct {
+		Dirs []Dir `json:"dirs"`
+	} `json:"data"`
+}
+
+func TestMigrateLintWithLogin(t *testing.T) {
+	token := "123456789"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "Bearer "+token, r.Header.Get("Authorization"))
+		query := graphQLQuery{}
+		err := json.NewDecoder(r.Body).Decode(&query)
+		require.NoError(t, err)
+		switch {
+		case strings.Contains(query.Query, "mutation reportMigrationLint"):
+			fmt.Fprintf(w, `{ "data": { "reportMigrationLint": { "url": "https://migration-lint-report-url" } } }`)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	atlasConfigURL := generateHCL(t, srv.URL, token)
+	t.Run("Web and Writer params produces an error", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		params := &atlasexec.MigrateLintParams{
+			ConfigURL: atlasConfigURL,
+			DevURL:    "sqlite://file?mode=memory",
+			DirURL:    "file://testdata/migrations",
+			Latest:    1,
+		}
+		paramsWeb := *params
+		paramsWeb.Web = true
+		got, err := c.MigrateLint(context.Background(), &paramsWeb)
+		require.ErrorContains(t, err, "custom Writer or Web reporting are not supported")
+		require.Nil(t, got)
+		paramsWriter := *params
+		paramsWriter.Writer = &bytes.Buffer{}
+		got, err = c.MigrateLint(context.Background(), &paramsWriter)
+		require.ErrorContains(t, err, "custom Writer or Web reporting are not supported")
+		require.Nil(t, got)
+	})
+	t.Run("lint parse web output", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		var buf bytes.Buffer
+		err = c.MigrateLintError(context.Background(), &atlasexec.MigrateLintParams{
+			DevURL: "sqlite://file?mode=memory",
+			DirURL: "file://testdata/migrations",
+
+			ConfigURL: atlasConfigURL,
+			Latest:    1,
+			Writer:    &buf,
+			Web:       true,
+		})
+		require.NoError(t, err)
+		require.Equal(t, strings.TrimSpace(string(buf.Bytes())), "https://migration-lint-report-url")
+	})
+}
+
+func generateHCL(t *testing.T, url, token string) string {
+	tmpl := `
+	atlas {
+		cloud {
+			token = "{{ .Token }}"
+		{{- if .URL }}
+			url = "{{ .URL }}"
+		{{- end }}
+		}	  
+	}
+	env "test" {
+  	}
+	`
+	config := template.Must(template.New("atlashcl").Parse(tmpl))
+	templateParams := struct {
+		URL   string
+		Token string
+	}{
+		URL:   url,
+		Token: token,
+	}
+	var buf bytes.Buffer
+	err := config.Execute(&buf, templateParams)
+	require.NoError(t, err)
+	atlasConfigURL, clean, err := atlasexec.TempFile(buf.String(), "hcl")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, clean())
+	})
+	return atlasConfigURL
+}
+
+func testDir(t *testing.T, path string) (d migrate.MemDir) {
+	rd, err := os.ReadDir(path)
+	require.NoError(t, err)
+	for _, f := range rd {
+		fp := filepath.Join(path, f.Name())
+		b, err := os.ReadFile(fp)
+		require.NoError(t, err)
+		require.NoError(t, d.WriteFile(f.Name(), b))
+	}
+	return d
 }
 
 func Test_MigrateStatus(t *testing.T) {
