@@ -2,7 +2,6 @@ package atlasexec_test
 
 import (
 	"ariga.io/atlas/cmd/atlas/x"
-	"ariga.io/atlas/sql/migrate"
 	"ariga.io/atlas/sql/sqlcheck"
 	"bytes"
 	"context"
@@ -234,18 +233,6 @@ func generateHCL(t *testing.T, url, token string) string {
 		require.NoError(t, clean())
 	})
 	return atlasConfigURL
-}
-
-func testDir(t *testing.T, path string) (d migrate.MemDir) {
-	rd, err := os.ReadDir(path)
-	require.NoError(t, err)
-	for _, f := range rd {
-		fp := filepath.Join(path, f.Name())
-		b, err := os.ReadFile(fp)
-		require.NoError(t, err)
-		require.NoError(t, d.WriteFile(f.Name(), b))
-	}
-	return d
 }
 
 func Test_MigrateStatus(t *testing.T) {
