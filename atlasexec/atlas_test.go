@@ -244,7 +244,6 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		summary, err := c.MigrateLint(context.Background(), &atlasexec.MigrateLintParams{
 			DevURL: "sqlite://file?mode=memory",
 			DirURL: "file://testdata/migrations",
-
 			ConfigURL: atlasConfigURL,
 			Base:      "atlas://test-dir-slug",
 		})
