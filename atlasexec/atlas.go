@@ -326,7 +326,9 @@ func (c *Client) MigrateLintError(ctx context.Context, params *MigrateLintParams
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(params.Writer, reader)
+	if params.Writer != nil {
+		_, err = io.Copy(params.Writer, reader)
+	}
 	return err
 }
 
