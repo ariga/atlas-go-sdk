@@ -145,9 +145,8 @@ func TestMigrateLintWithLogin(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "Bearer "+token, r.Header.Get("Authorization"))
 		query := graphQLQuery{}
-		err := json.NewDecoder(r.Body).Decode(&query)
-		require.NoError(t, err)
-		if strings.Contains(query.Query, "mutation reportMigrationLint" {
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&query))
+		if strings.Contains(query.Query, "mutation reportMigrationLint") {
 			fmt.Fprintf(w, `{ "data": { "reportMigrationLint": { "url": "https://migration-lint-report-url" } } }`)
 		}
 	}))
