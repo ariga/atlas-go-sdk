@@ -144,7 +144,7 @@ func TestMigrateLintWithLogin(t *testing.T) {
 	token := "123456789"
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "Bearer "+token, r.Header.Get("Authorization"))
-		query := graphQLQuery{}
+		var query graphQLQuery
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&query))
 		if strings.Contains(query.Query, "mutation reportMigrationLint") {
 			fmt.Fprintf(w, `{ "data": { "reportMigrationLint": { "url": "https://migration-lint-report-url" } } }`)
@@ -160,15 +160,14 @@ func TestMigrateLintWithLogin(t *testing.T) {
 			DevURL:    "sqlite://file?mode=memory",
 			DirURL:    "file://testdata/migrations",
 			Latest:    1,
+			Web:       true,
 		}
-		paramsWeb := *params
-		paramsWeb.Web = true
-		got, err := c.MigrateLint(context.Background(), &paramsWeb)
+		got, err := c.MigrateLint(context.Background(), params)
 		require.ErrorContains(t, err, "Writer or Web reporting are not supported")
 		require.Nil(t, got)
-		paramsWriter := *params
-		paramsWriter.Writer = &bytes.Buffer{}
-		got, err = c.MigrateLint(context.Background(), &paramsWriter)
+		params.Web = false
+		params.Writer = &bytes.Buffer{}
+		got, err = c.MigrateLint(context.Background(), params)
 		require.ErrorContains(t, err, "Writer or Web reporting are not supported")
 		require.Nil(t, got)
 	})
@@ -176,7 +175,7 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		c, err := atlasexec.NewClient(".", "atlas")
 		require.NoError(t, err)
 		var buf bytes.Buffer
-		err = c.MigrateLintError(context.Background(), &atlasexec.MigrateLintParams{
+		require.NoError(t, c.MigrateLintError(context.Background(), &atlasexec.MigrateLintParams{
 			DevURL: "sqlite://file?mode=memory",
 			DirURL: "file://testdata/migrations",
 
@@ -184,8 +183,7 @@ func TestMigrateLintWithLogin(t *testing.T) {
 			Latest:    1,
 			Writer:    &buf,
 			Web:       true,
-		})
-		require.NoError(t, err)
+		}))
 		require.Equal(t, strings.TrimSpace(string(buf.Bytes())), "https://migration-lint-report-url")
 	})
 }
@@ -212,8 +210,7 @@ func generateHCL(t *testing.T, url, token string) string {
 		Token: token,
 	}
 	var buf bytes.Buffer
-	err := config.Execute(&buf, templateParams)
-	require.NoError(t, err)
+	require.NoError(t, config.Execute(&buf, templateParams))
 	atlasConfigURL, clean, err := atlasexec.TempFile(buf.String(), "hcl")
 	require.NoError(t, err)
 	t.Cleanup(func() {
