@@ -183,7 +183,7 @@ func TestMigrateLintWithLogin(t *testing.T) {
 			Writer:    &buf,
 			Web:       true,
 		}))
-		require.Equal(t, strings.TrimSpace(string(buf.Bytes())), "https://migration-lint-report-url")
+		require.Equal(t, strings.TrimSpace(buf.String()), "https://migration-lint-report-url")
 	})
 }
 
