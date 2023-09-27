@@ -64,8 +64,10 @@ type (
 		ConfigURL string
 		DevURL    string
 		DirURL    string
+		Web       bool
 		Latest    uint64
 		Vars      Vars
+		Writer    io.Writer
 	}
 	// SchemaApplyParams are the parameters for the `schema apply` command.
 	SchemaApplyParams struct {
@@ -281,9 +283,13 @@ func (c *Client) SchemaInspect(ctx context.Context, params *SchemaInspectParams)
 	return stringVal(c.runCommand(ctx, args))
 }
 
-// MigrateLint runs the 'migrate lint' command.
-func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*SummaryReport, error) {
-	args := []string{"migrate", "lint", "--format", "{{ json . }}"}
+func lintArgs(params *MigrateLintParams) []string {
+	args := []string{"migrate", "lint"}
+	if params.Web {
+		args = append(args, "-w")
+	} else {
+		args = append(args, "--format", "{{ json . }}")
+	}
 	if params.Env != "" {
 		args = append(args, "--env", params.Env)
 	}
@@ -300,7 +306,28 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 		args = append(args, "--latest", strconv.FormatUint(params.Latest, 10))
 	}
 	args = append(args, params.Vars.AsArgs()...)
-	return jsonDecode[SummaryReport](c.runCommand(ctx, args, validJSON))
+	return args
+}
+
+// MigrateLint runs the 'migrate lint' command.
+func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*SummaryReport, error) {
+	if params.Writer != nil || params.Web {
+		return nil, errors.New("atlasexec: Writer or Web reporting are not supported with MigrateLint, use MigrateLintError")
+	}
+	r, err := c.runCommand(ctx, lintArgs(params), validJSON)
+	return jsonDecode[SummaryReport](r, err)
+}
+
+// MigrateLintError runs the 'migrate lint' command, the output is written to params.Writer
+func (c *Client) MigrateLintError(ctx context.Context, params *MigrateLintParams) error {
+	r, err := c.runCommand(ctx, lintArgs(params))
+	if err != nil {
+		return err
+	}
+	if params.Writer != nil {
+		_, err = io.Copy(params.Writer, r)
+	}
+	return err
 }
 
 // MigrateStatus runs the 'migrate status' command.
