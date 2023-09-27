@@ -131,7 +131,6 @@ func TestMigrateLint(t *testing.T) {
 			Latest: 1,
 			Writer: &buf,
 		})
-		require.ErrorContains(t, err, "lint errors exist")
 		require.ErrorIs(t, err, atlasexec.ErrLint)
 		var raw json.RawMessage
 		require.NoError(t, json.NewDecoder(&buf).Decode(&raw))
@@ -281,7 +280,6 @@ func TestMigrateLintWithLogin(t *testing.T) {
 			Context:   `{"repo":"testing-repo", "path":"path/to/dir","branch":"testing-branch", "commit":"sha123"}`,
 			Web:       true,
 		})
-		require.ErrorContains(t, err, "lint errors exist")
 		require.ErrorIs(t, err, atlasexec.ErrLint)
 		found := false
 		for _, query := range payloads {
