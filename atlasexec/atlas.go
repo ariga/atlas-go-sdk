@@ -312,7 +312,7 @@ func lintArgs(params *MigrateLintParams) []string {
 // MigrateLint runs the 'migrate lint' command.
 func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*SummaryReport, error) {
 	if params.Writer != nil || params.Web {
-		return nil, errors.New("custom Writer or Web reporting are not supported with MigrateLint, use MigrateLintError")
+		return nil, errors.New("atlasexec: Writer or Web reporting are not supported with MigrateLint, use MigrateLintError")
 	}
 	r, err := c.runCommand(ctx, lintArgs(params), validJSON)
 	return jsonDecode[SummaryReport](r, err)

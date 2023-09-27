@@ -177,12 +177,12 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		paramsWeb := *params
 		paramsWeb.Web = true
 		got, err := c.MigrateLint(context.Background(), &paramsWeb)
-		require.ErrorContains(t, err, "custom Writer or Web reporting are not supported")
+		require.ErrorContains(t, err, "Writer or Web reporting are not supported")
 		require.Nil(t, got)
 		paramsWriter := *params
 		paramsWriter.Writer = &bytes.Buffer{}
 		got, err = c.MigrateLint(context.Background(), &paramsWriter)
-		require.ErrorContains(t, err, "custom Writer or Web reporting are not supported")
+		require.ErrorContains(t, err, "Writer or Web reporting are not supported")
 		require.Nil(t, got)
 	})
 	t.Run("lint parse web output", func(t *testing.T) {
