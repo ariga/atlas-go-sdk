@@ -147,7 +147,7 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		var query graphQLQuery
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&query))
 		if strings.Contains(query.Query, "mutation reportMigrationLint") {
-			fmt.Fprintf(w, `{ "data": { "reportMigrationLint": { "url": "https://migration-lint-report-url" } } }`)
+			_, _ = fmt.Fprint(w, `{ "data": { "reportMigrationLint": { "url": "https://migration-lint-report-url" } } }`)
 		}
 	}))
 	t.Cleanup(srv.Close)
@@ -176,9 +176,8 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		require.NoError(t, err)
 		var buf bytes.Buffer
 		require.NoError(t, c.MigrateLintError(context.Background(), &atlasexec.MigrateLintParams{
-			DevURL: "sqlite://file?mode=memory",
-			DirURL: "file://testdata/migrations",
-
+			DevURL:    "sqlite://file?mode=memory",
+			DirURL:    "file://testdata/migrations",
 			ConfigURL: atlasConfigURL,
 			Latest:    1,
 			Writer:    &buf,
@@ -189,8 +188,7 @@ func TestMigrateLintWithLogin(t *testing.T) {
 }
 
 func generateHCL(t *testing.T, url, token string) string {
-	tmpl := `
-	atlas {
+	tmpl := `atlas {
 		cloud {
 			token = "{{ .Token }}"
 		{{- if .URL }}
@@ -198,9 +196,7 @@ func generateHCL(t *testing.T, url, token string) string {
 		{{- end }}
 		}	  
 	}
-	env "test" {
-  	}
-	`
+	env "test" {}`
 	config := template.Must(template.New("atlashcl").Parse(tmpl))
 	templateParams := struct {
 		URL   string
