@@ -190,7 +190,30 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		}
 	}))
 	t.Cleanup(srv.Close)
-	atlasConfigURL := generateHCL(t, srv.URL, token)
+	tmpl := `atlas {
+		cloud {
+			token = "{{ .Token }}"
+		{{- if .URL }}
+			url = "{{ .URL }}"
+		{{- end }}
+		}	  
+	}
+	env "test" {}`
+	config := template.Must(template.New("atlashcl").Parse(tmpl))
+	templateParams := struct {
+		URL   string
+		Token string
+	}{
+		URL:   srv.URL,
+		Token: token,
+	}
+	var buf bytes.Buffer
+	require.NoError(t, config.Execute(&buf, templateParams))
+	atlasConfigURL, clean, err := atlasexec.TempFile(buf.String(), "hcl")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, clean())
+	})
 	t.Run("Web and Writer params produces an error", func(t *testing.T) {
 		c, err := atlasexec.NewClient(".", "atlas")
 		require.NoError(t, err)
@@ -237,34 +260,6 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, summary)
 	})
-}
-
-func generateHCL(t *testing.T, url, token string) string {
-	tmpl := `atlas {
-		cloud {
-			token = "{{ .Token }}"
-		{{- if .URL }}
-			url = "{{ .URL }}"
-		{{- end }}
-		}	  
-	}
-	env "test" {}`
-	config := template.Must(template.New("atlashcl").Parse(tmpl))
-	templateParams := struct {
-		URL   string
-		Token string
-	}{
-		URL:   url,
-		Token: token,
-	}
-	var buf bytes.Buffer
-	require.NoError(t, config.Execute(&buf, templateParams))
-	atlasConfigURL, clean, err := atlasexec.TempFile(buf.String(), "hcl")
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		require.NoError(t, clean())
-	})
-	return atlasConfigURL
 }
 
 func Test_MigrateStatus(t *testing.T) {
