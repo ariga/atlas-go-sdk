@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -147,30 +146,21 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		var query graphQLQuery
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&query))
 		if strings.Contains(query.Query, "mutation reportMigrationLint") {
-			_, _ = fmt.Fprint(w, `{ "data": { "reportMigrationLint": { "url": "https://migration-lint-report-url" } } }`)
+			_, err := fmt.Fprint(w, `{ "data": { "reportMigrationLint": { "url": "https://migration-lint-report-url" } } }`)
+			require.NoError(t, err)
 		}
 	}))
 	t.Cleanup(srv.Close)
-	tmpl := `atlas {
-		cloud {
-			token = "{{ .Token }}"
-		{{- if .URL }}
-			url = "{{ .URL }}"
-		{{- end }}
-		}	  
-	}
-	env "test" {}`
-	config := template.Must(template.New("atlashcl").Parse(tmpl))
-	templateParams := struct {
-		URL   string
-		Token string
-	}{
-		URL:   srv.URL,
-		Token: token,
-	}
-	var buf bytes.Buffer
-	require.NoError(t, config.Execute(&buf, templateParams))
-	atlasConfigURL, clean, err := atlasexec.TempFile(buf.String(), "hcl")
+	st := fmt.Sprintf(
+		`atlas { 
+			cloud {	
+				token = %q
+				url = %q
+			}
+		}
+		env "test" {}
+		`, token, srv.URL)
+	atlasConfigURL, clean, err := atlasexec.TempFile(st, "hcl")
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		require.NoError(t, clean())
