@@ -64,6 +64,7 @@ type (
 		ConfigURL string
 		DevURL    string
 		DirURL    string
+		Context   string
 		Web       bool
 		Latest    uint64
 		Vars      Vars
@@ -145,13 +146,13 @@ func (c *Client) Login(ctx context.Context, params *LoginParams) error {
 	if params.Token == "" {
 		return errors.New("token cannot be empty")
 	}
-	_, err := c.runCommand(ctx, []string{"login", "--token", params.Token})
+	_, _, err := c.runCommand(ctx, []string{"login", "--token", params.Token})
 	return err
 }
 
 // Logout runs the 'logout' command.
 func (c *Client) Logout(ctx context.Context) error {
-	_, err := c.runCommand(ctx, []string{"logout"})
+	_, _, err := c.runCommand(ctx, []string{"logout"})
 	return err
 }
 
@@ -291,6 +292,9 @@ func lintArgs(params *MigrateLintParams) []string {
 	} else {
 		args = append(args, "--format", "{{ json . }}")
 	}
+	if params.Context != "" {
+		args = append(args, "--context", params.Context)
+	}
 	if params.Env != "" {
 		args = append(args, "--env", params.Env)
 	}
@@ -318,18 +322,27 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 	if params.Writer != nil || params.Web {
 		return nil, errors.New("atlasexec: Writer or Web reporting are not supported with MigrateLint, use MigrateLintError")
 	}
-	r, err := c.runCommand(ctx, lintArgs(params), validJSON)
-	return jsonDecode[SummaryReport](r, err)
+	return jsonDecode[SummaryReport](c.runCommand(ctx, lintArgs(params), validJSON))
 }
 
 // MigrateLintError runs the 'migrate lint' command, the output is written to params.Writer
 func (c *Client) MigrateLintError(ctx context.Context, params *MigrateLintParams) error {
-	r, err := c.runCommand(ctx, lintArgs(params))
+	r, exitCode, err := c.runCommand(ctx, lintArgs(params))
 	if err != nil {
+		return err
+	}
+	if exitCode > 1 {
+		err = fmt.Errorf("atlasexec: atlas exited with code: %v", exitCode)
 		return err
 	}
 	if params.Writer != nil {
 		_, err = io.Copy(params.Writer, r)
+	}
+	if err != nil {
+		return err
+	}
+	if exitCode == 1 {
+		err = fmt.Errorf("atlasexec: lint errors exist")
 	}
 	return err
 }
@@ -360,7 +373,7 @@ var reVersion = regexp.MustCompile(`^atlas version v(\d+\.\d+.\d+)-?([a-z0-9]*)?
 
 // Version runs the 'version' command.
 func (c *Client) Version(ctx context.Context) (*Version, error) {
-	r, err := c.runCommand(ctx, []string{"version"})
+	r, _, err := c.runCommand(ctx, []string{"version"})
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +397,7 @@ func (c *Client) Version(ctx context.Context) (*Version, error) {
 }
 
 // runCommand runs the given command and returns its output.
-func (c *Client) runCommand(ctx context.Context, args []string, vs ...validator) (io.Reader, error) {
+func (c *Client) runCommand(ctx context.Context, args []string, vs ...validator) (io.Reader, int, error) {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, c.execPath, args...)
 	cmd.Dir = c.workingDir
@@ -398,7 +411,7 @@ func (c *Client) runCommand(ctx context.Context, args []string, vs ...validator)
 		case stderr.Len() > 0:
 			// Atlas CLI writes the error to stderr.
 			// So this's critical issue, return the error.
-			return nil, &cliError{
+			return nil, cmd.ProcessState.ExitCode(), &cliError{
 				summary: strings.TrimSpace(stderr.String()),
 				detail:  strings.TrimSpace(stdout.String()),
 			}
@@ -411,16 +424,16 @@ func (c *Client) runCommand(ctx context.Context, args []string, vs ...validator)
 		default:
 			// When the exit code is not 1, it means that the
 			// command wasn't executed successfully.
-			return nil, err
+			return nil, cmd.ProcessState.ExitCode(), err
 		}
 	}
 	out := stdout.Bytes()
 	for _, v := range vs {
 		if err := v(out); err != nil {
-			return nil, err
+			return nil, cmd.ProcessState.ExitCode(), err
 		}
 	}
-	return &stdout, nil
+	return &stdout, cmd.ProcessState.ExitCode(), nil
 }
 
 // LatestVersion returns the latest version of the migration directory.
@@ -507,7 +520,7 @@ func (v Vars) AsArgs() []string {
 	return args
 }
 
-func stringVal(r io.Reader, err error) (string, error) {
+func stringVal(r io.Reader, exitCode int, err error) (string, error) {
 	if err != nil {
 		return "", err
 	}
@@ -518,7 +531,7 @@ func stringVal(r io.Reader, err error) (string, error) {
 	return string(s), nil
 }
 
-func jsonDecode[T any](r io.Reader, err error) (*T, error) {
+func jsonDecode[T any](r io.Reader, _ int, err error) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
