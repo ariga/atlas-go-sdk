@@ -1,14 +1,12 @@
 package atlasexec_test
 
 import (
-	"ariga.io/atlas/sql/migrate"
 	"bytes"
 	"context"
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -19,6 +17,7 @@ import (
 
 	"ariga.io/atlas-go-sdk/atlasexec"
 	"ariga.io/atlas/cmd/atlas/x"
+	"ariga.io/atlas/sql/migrate"
 	"ariga.io/atlas/sql/sqlcheck"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -172,7 +171,8 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&query))
 		switch {
 		case strings.Contains(query.Query, "mutation reportMigrationLint"):
-			_, _ = fmt.Fprintf(w, `{ "data": { "reportMigrationLint": { "url": "https://migration-lint-report-url" } } }`)
+			_, err := fmt.Fprintf(w, `{ "data": { "reportMigrationLint": { "url": "https://migration-lint-report-url" } } }`)
+			require.NoError(t, err)
 		case strings.Contains(query.Query, "query dirs"):
 			dir, err := migrate.NewLocalDir("./testdata/migrations")
 			require.NoError(t, err)
@@ -186,30 +186,21 @@ func TestMigrateLintWithLogin(t *testing.T) {
 			}}
 			st2bytes, err := json.Marshal(resp)
 			require.NoError(t, err)
-			_, _ = fmt.Fprint(w, string(st2bytes))
+			_, err = fmt.Fprint(w, string(st2bytes))
+			require.NoError(t, err)
 		}
 	}))
 	t.Cleanup(srv.Close)
-	tmpl := `atlas {
-		cloud {
-			token = "{{ .Token }}"
-		{{- if .URL }}
-			url = "{{ .URL }}"
-		{{- end }}
-		}	  
-	}
-	env "test" {}`
-	config := template.Must(template.New("atlashcl").Parse(tmpl))
-	templateParams := struct {
-		URL   string
-		Token string
-	}{
-		URL:   srv.URL,
-		Token: token,
-	}
-	var buf bytes.Buffer
-	require.NoError(t, config.Execute(&buf, templateParams))
-	atlasConfigURL, clean, err := atlasexec.TempFile(buf.String(), "hcl")
+	st := fmt.Sprintf(
+		`atlas { 
+			cloud {	
+				token = %q
+				url = %q
+			}
+		}
+		env "test" {}
+		`, token, srv.URL)
+	atlasConfigURL, clean, err := atlasexec.TempFile(st, "hcl")
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		require.NoError(t, clean())
