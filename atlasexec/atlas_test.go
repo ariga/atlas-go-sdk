@@ -136,22 +136,23 @@ func TestMigrateLint(t *testing.T) {
 	})
 }
 
-type graphQLQuery struct {
-	Query     string          `json:"query"`
-	Variables json.RawMessage `json:"variables"`
-}
-
-type Dir struct {
-	Name    string `json:"name"`
-	Content string `json:"content"`
-}
-type dirsQueryResponse struct {
-	Data struct {
-		Dirs []Dir `json:"dirs"`
-	} `json:"data"`
-}
-
 func TestMigrateLintWithLogin(t *testing.T) {
+	type graphQLQuery struct {
+		Query     string          `json:"query"`
+		Variables json.RawMessage `json:"variables"`
+	}
+
+	type Dir struct {
+		Name    string `json:"name"`
+		Content string `json:"content"`
+		Slug    string `json:"slug"`
+	}
+	type dirsQueryResponse struct {
+		Data struct {
+			Dirs []Dir `json:"dirs"`
+		} `json:"data"`
+	}
+
 	token := "123456789"
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "Bearer "+token, r.Header.Get("Authorization"))
