@@ -1,8 +1,6 @@
 package atlasexec_test
 
 import (
-	"ariga.io/atlas/cmd/atlas/x"
-	"ariga.io/atlas/sql/sqlcheck"
 	"bytes"
 	"context"
 	"database/sql"
@@ -17,10 +15,12 @@ import (
 	"strings"
 	"testing"
 
+	"ariga.io/atlas-go-sdk/atlasexec"
+	"ariga.io/atlas/cmd/atlas/x"
+	"ariga.io/atlas/sql/sqlcheck"
+
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/require"
-
-	"ariga.io/atlas-go-sdk/atlasexec"
 )
 
 func Test_MigrateApply(t *testing.T) {
