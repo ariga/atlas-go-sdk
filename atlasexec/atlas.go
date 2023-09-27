@@ -325,6 +325,9 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 	return jsonDecode[SummaryReport](c.runCommand(ctx, lintArgs(params), validJSON))
 }
 
+// ErrLint is returned by MigrateLintError when linting errors are detected
+var ErrLint = errors.New("atlasexec: lint errors exist")
+
 // MigrateLintError runs the 'migrate lint' command, the output is written to params.Writer
 func (c *Client) MigrateLintError(ctx context.Context, params *MigrateLintParams) error {
 	r, exitCode, err := c.runCommand(ctx, lintArgs(params))
@@ -342,7 +345,7 @@ func (c *Client) MigrateLintError(ctx context.Context, params *MigrateLintParams
 		return err
 	}
 	if exitCode == 1 {
-		err = fmt.Errorf("atlasexec: lint errors exist")
+		return ErrLint
 	}
 	return err
 }

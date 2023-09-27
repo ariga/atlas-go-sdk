@@ -132,6 +132,7 @@ func TestMigrateLint(t *testing.T) {
 			Writer: &buf,
 		})
 		require.ErrorContains(t, err, "lint errors exist")
+		require.ErrorIs(t, err, atlasexec.ErrLint)
 		var raw json.RawMessage
 		require.NoError(t, json.NewDecoder(&buf).Decode(&raw))
 	})
@@ -281,6 +282,7 @@ func TestMigrateLintWithLogin(t *testing.T) {
 			Web:       true,
 		})
 		require.ErrorContains(t, err, "lint errors exist")
+		require.ErrorIs(t, err, atlasexec.ErrLint)
 		found := false
 		for _, query := range payloads {
 			if !strings.Contains(query.Query, "mutation reportMigrationLint") {
