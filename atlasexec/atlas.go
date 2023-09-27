@@ -314,15 +314,13 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 	if params.Writer != nil || params.Web {
 		return nil, errors.New("custom Writer or Web reporting are not supported with MigrateLint, use MigrateLintError")
 	}
-	args := lintArgs(params)
-	r, err := c.runCommand(ctx, args, validJSON)
+	r, err := c.runCommand(ctx, lintArgs(params), validJSON)
 	return jsonDecode[SummaryReport](r, err)
 }
 
 // MigrateLintError runs the 'migrate lint' command, the output is written to params.Writer
 func (c *Client) MigrateLintError(ctx context.Context, params *MigrateLintParams) error {
-	args := lintArgs(params)
-	r, err := c.runCommand(ctx, args)
+	r, err := c.runCommand(ctx, lintArgs(params))
 	if err != nil {
 		return err
 	}
