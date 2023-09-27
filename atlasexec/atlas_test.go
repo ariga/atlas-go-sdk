@@ -141,26 +141,13 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		Query     string          `json:"query"`
 		Variables json.RawMessage `json:"variables"`
 	}
-
-	type Dir struct {
-		Name    string `json:"name"`
-		Content string `json:"content"`
-		Slug    string `json:"slug"`
-	}
-	type dirsQueryResponse struct {
-		Data struct {
-			Dirs []Dir `json:"dirs"`
-		} `json:"data"`
-	}
-
 	token := "123456789"
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "Bearer "+token, r.Header.Get("Authorization"))
 		query := graphQLQuery{}
 		err := json.NewDecoder(r.Body).Decode(&query)
 		require.NoError(t, err)
-		switch {
-		case strings.Contains(query.Query, "mutation reportMigrationLint"):
+		if strings.Contains(query.Query, "mutation reportMigrationLint" {
 			fmt.Fprintf(w, `{ "data": { "reportMigrationLint": { "url": "https://migration-lint-report-url" } } }`)
 		}
 	}))
