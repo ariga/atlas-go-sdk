@@ -319,9 +319,7 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 		return nil, errors.New("atlasexec: Writer or Web reporting are not supported with MigrateLint, use MigrateLintError")
 	}
 	r, err := c.runCommand(ctx, lintArgs(params))
-	var cliErr cliError
-	ok := errors.As(err, &cliErr)
-	if ok && cliErr.hasLintErrors() {
+	if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.summary == "" {
 		r = strings.NewReader(cliErr.detail)
 		err = nil
 	}
@@ -331,21 +329,15 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 // MigrateLintError runs the 'migrate lint' command, the output is written to params.Writer
 func (c *Client) MigrateLintError(ctx context.Context, params *MigrateLintParams) error {
 	r, err := c.runCommand(ctx, lintArgs(params))
-	var cliErr cliError
-	ok := errors.As(err, &cliErr)
-	if ok && cliErr.hasLintErrors() {
+	if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.summary == "" {
 		r = strings.NewReader(cliErr.detail)
 	}
 	if params.Writer != nil && r != nil {
-		_, ioErr := io.Copy(params.Writer, r)
-		err = errors.Join(err, ioErr)
+		if _, ioErr := io.Copy(params.Writer, r); ioErr != nil {
+			err = errors.Join(err, ioErr)
+		}
 	}
 	return err
-}
-
-func (e cliError) hasLintErrors() bool {
-	// exit code 1 when summary is empty means lint error printed to stdout
-	return e.exitCode == 1 && e.summary == ""
 }
 
 // MigrateStatus runs the 'migrate status' command.
@@ -409,9 +401,8 @@ func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, erro
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
 		return nil, cliError{
-			summary:  strings.TrimSpace(stderr.String()),
-			detail:   strings.TrimSpace(stdout.String()),
-			exitCode: cmd.ProcessState.ExitCode(),
+			summary: strings.TrimSpace(stderr.String()),
+			detail:  strings.TrimSpace(stdout.String()),
 		}
 	}
 	return &stdout, nil
@@ -467,18 +458,17 @@ func TempFile(content, ext string) (string, func() error, error) {
 }
 
 type cliError struct {
-	summary  string
-	detail   string
-	exitCode int
+	summary string
+	detail  string
 }
 
 // Error implements the error interface.
 func (e cliError) Error() string {
 	s, d := e.Summary(), e.Detail()
 	if d != "" {
-		return fmt.Sprintf("atlasexec: %s, %s, atlas command exited with %v", s, d, e.exitCode)
+		return fmt.Sprintf("atlasexec: %s, %s", s, d)
 	}
-	return fmt.Sprintf("atlasexec: %s, atlas command exited with %v", s, e.exitCode)
+	return fmt.Sprintf("atlasexec: %s", s)
 }
 
 // Summary implements the diag.Diagnostic interface.

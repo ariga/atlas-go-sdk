@@ -131,7 +131,7 @@ func TestMigrateLint(t *testing.T) {
 			Latest: 1,
 			Writer: &buf,
 		})
-		require.ErrorContains(t, err, "atlas command exited with 1")
+		require.ErrorContains(t, err, "destructive changes detected")
 		var raw json.RawMessage
 		require.NoError(t, json.NewDecoder(&buf).Decode(&raw))
 	})
