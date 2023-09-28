@@ -272,15 +272,17 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		atlasConfigURL := generateHCL(t, token, srv)
 		c, err := atlasexec.NewClient(".", "atlas")
 		require.NoError(t, err)
+		var buf bytes.Buffer
 		err = c.MigrateLintError(context.Background(), &atlasexec.MigrateLintParams{
 			DevURL:    "sqlite://file?mode=memory",
 			DirURL:    "file://testdata/migrations",
 			ConfigURL: atlasConfigURL,
 			Base:      "atlas://test-dir-slug",
 			Context:   `{"repo":"testing-repo", "path":"path/to/dir","branch":"testing-branch", "commit":"sha123"}`,
+			Writer:    &buf,
 			Web:       true,
 		})
-		require.ErrorContains(t, err, "atlas command exited with 1")
+		require.ErrorContains(t, err, "https://migration-lint-report-url")
 		found := false
 		for _, query := range payloads {
 			if !strings.Contains(query.Query, "mutation reportMigrationLint") {
@@ -294,6 +296,7 @@ func TestMigrateLintWithLogin(t *testing.T) {
 			require.Equal(t, "testing-repo", query.MigrateLintReport.Context.Repo)
 		}
 		require.True(t, found)
+		require.Equal(t, strings.TrimSpace(buf.String()), "https://migration-lint-report-url")
 	})
 }
 
