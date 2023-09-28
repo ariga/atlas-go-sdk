@@ -319,17 +319,23 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 		return nil, errors.New("atlasexec: Writer or Web reporting are not supported with MigrateLint, use MigrateLintError")
 	}
 	r, err := c.runCommand(ctx, lintArgs(params))
+	if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.summary == "" {
+		r = strings.NewReader(cliErr.detail)
+		err = nil
+	}
 	return jsonDecode[SummaryReport](r, err)
 }
 
 // MigrateLintError runs the 'migrate lint' command, the output is written to params.Writer
 func (c *Client) MigrateLintError(ctx context.Context, params *MigrateLintParams) error {
 	r, err := c.runCommand(ctx, lintArgs(params))
-	if err != nil {
-		return err
+	if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.summary == "" {
+		r = strings.NewReader(cliErr.detail)
 	}
-	if params.Writer != nil {
-		_, err = io.Copy(params.Writer, r)
+	if params.Writer != nil && r != nil {
+		if _, ioErr := io.Copy(params.Writer, r); ioErr != nil {
+			err = errors.Join(err, ioErr)
+		}
 	}
 	return err
 }
@@ -394,24 +400,9 @@ func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, erro
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
-		switch {
-		case stderr.Len() > 0:
-			// Atlas CLI writes the error to stderr.
-			// So this's critical issue, return the error.
-			return nil, &cliError{
-				summary: strings.TrimSpace(stderr.String()),
-				detail:  strings.TrimSpace(stdout.String()),
-			}
-		case cmd.ProcessState.ExitCode() == 1:
-			// When the exit code is 1, it means that the command
-			// failed but the output is still valid JSON.
-			//
-			// `atlas migrate lint` returns 1 when there are
-			// linting errors.
-		default:
-			// When the exit code is not 1, it means that the
-			// command wasn't executed successfully.
-			return nil, err
+		return nil, cliError{
+			summary: strings.TrimSpace(stderr.String()),
+			detail:  strings.TrimSpace(stdout.String()),
 		}
 	}
 	return &stdout, nil
