@@ -64,6 +64,7 @@ type (
 		ConfigURL string
 		DevURL    string
 		DirURL    string
+		Context   string
 		Web       bool
 		Latest    uint64
 		Vars      Vars
@@ -290,6 +291,9 @@ func lintArgs(params *MigrateLintParams) []string {
 		args = append(args, "-w")
 	} else {
 		args = append(args, "--format", "{{ json . }}")
+	}
+	if params.Context != "" {
+		args = append(args, "--context", params.Context)
 	}
 	if params.Env != "" {
 		args = append(args, "--env", params.Env)
