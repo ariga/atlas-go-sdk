@@ -52,7 +52,7 @@ func Test_MigrateApply(t *testing.T) {
 	got, err := c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
 		Env: "test",
 	})
-	require.EqualError(t, err, `atlasexec: required flag "url" not set`)
+	require.ErrorContains(t, err, `atlasexec: required flag "url" not set`)
 	require.Nil(t, got)
 	// Set the env var and try again
 	os.Setenv("DB_URL", "sqlite://file?_fk=1&cache=shared&mode=memory")
@@ -131,7 +131,7 @@ func TestMigrateLint(t *testing.T) {
 			Latest: 1,
 			Writer: &buf,
 		})
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "atlas command exited with 1")
 		var raw json.RawMessage
 		require.NoError(t, json.NewDecoder(&buf).Decode(&raw))
 	})
@@ -242,8 +242,8 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		c, err := atlasexec.NewClient(".", "atlas")
 		require.NoError(t, err)
 		summary, err := c.MigrateLint(context.Background(), &atlasexec.MigrateLintParams{
-			DevURL: "sqlite://file?mode=memory",
-			DirURL: "file://testdata/migrations",
+			DevURL:    "sqlite://file?mode=memory",
+			DirURL:    "file://testdata/migrations",
 			ConfigURL: atlasConfigURL,
 			Base:      "atlas://test-dir-slug",
 		})
