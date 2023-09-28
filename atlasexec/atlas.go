@@ -520,15 +520,12 @@ func jsonDecode[T any](r io.Reader, err error) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !json.Valid(buf) {
+	var dst T
+	if err = json.Unmarshal(buf, &dst); err != nil {
 		return nil, cliError{
 			summary: "Atlas CLI",
 			detail:  strings.TrimSpace(string(buf)),
 		}
-	}
-	var dst T
-	if err = json.Unmarshal(buf, &dst); err != nil {
-		return nil, err
 	}
 	return &dst, nil
 }
