@@ -150,62 +150,68 @@ func TestMigrateLint(t *testing.T) {
 }
 
 func TestMigrateLintWithLogin(t *testing.T) {
-	type graphQLQuery struct {
-		Query     string          `json:"query"`
-		Variables json.RawMessage `json:"variables"`
-	}
-	type Dir struct {
-		Name    string `json:"name"`
-		Content string `json:"content"`
-		Slug    string `json:"slug"`
-	}
-	type dirsQueryResponse struct {
-		Data struct {
-			Dirs []Dir `json:"dirs"`
-		} `json:"data"`
-	}
-	token := "123456789"
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, "Bearer "+token, r.Header.Get("Authorization"))
-		var query graphQLQuery
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&query))
-		switch {
-		case strings.Contains(query.Query, "mutation reportMigrationLint"):
-			_, err := fmt.Fprintf(w, `{ "data": { "reportMigrationLint": { "url": "https://migration-lint-report-url" } } }`)
-			require.NoError(t, err)
-		case strings.Contains(query.Query, "query dirs"):
-			dir, err := migrate.NewLocalDir("./testdata/migrations")
-			require.NoError(t, err)
-			ad, err := migrate.ArchiveDir(dir)
-			require.NoError(t, err)
-			var resp dirsQueryResponse
-			resp.Data.Dirs = []Dir{{
-				Name:    "test-dir-name",
-				Slug:    "test-dir-slug",
-				Content: base64.StdEncoding.EncodeToString(ad),
-			}}
-			st2bytes, err := json.Marshal(resp)
-			require.NoError(t, err)
-			_, err = fmt.Fprint(w, string(st2bytes))
-			require.NoError(t, err)
+	type (
+		ContextInput struct {
+			Repo   string `json:"repo"`
+			Path   string `json:"path"`
+			Branch string `json:"branch"`
+			Commit string `json:"commit"`
 		}
-	}))
-	t.Cleanup(srv.Close)
-	st := fmt.Sprintf(
-		`atlas { 
-			cloud {	
-				token = %q
-				url = %q
+		migrateLintReport struct {
+			Context *ContextInput `json:"context"`
+		}
+		graphQLQuery struct {
+			Query             string          `json:"query"`
+			Variables         json.RawMessage `json:"variables"`
+			MigrateLintReport struct {
+				migrateLintReport `json:"input"`
 			}
 		}
-		env "test" {}
-		`, token, srv.URL)
-	atlasConfigURL, clean, err := atlasexec.TempFile(st, "hcl")
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		require.NoError(t, clean())
-	})
+		Dir struct {
+			Name    string `json:"name"`
+			Content string `json:"content"`
+			Slug    string `json:"slug"`
+		}
+		dirsQueryResponse struct {
+			Data struct {
+				Dirs []Dir `json:"dirs"`
+			} `json:"data"`
+		}
+	)
+	token := "123456789"
+	handler := func(payloads *[]graphQLQuery) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			require.Equal(t, "Bearer "+token, r.Header.Get("Authorization"))
+			var query graphQLQuery
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&query))
+			*payloads = append(*payloads, query)
+			switch {
+			case strings.Contains(query.Query, "mutation reportMigrationLint"):
+				_, err := fmt.Fprintf(w, `{ "data": { "reportMigrationLint": { "url": "https://migration-lint-report-url" } } }`)
+				require.NoError(t, err)
+			case strings.Contains(query.Query, "query dirs"):
+				dir, err := migrate.NewLocalDir("./testdata/migrations")
+				require.NoError(t, err)
+				ad, err := migrate.ArchiveDir(dir)
+				require.NoError(t, err)
+				var resp dirsQueryResponse
+				resp.Data.Dirs = []Dir{{
+					Name:    "test-dir-name",
+					Slug:    "test-dir-slug",
+					Content: base64.StdEncoding.EncodeToString(ad),
+				}}
+				st2bytes, err := json.Marshal(resp)
+				require.NoError(t, err)
+				_, err = fmt.Fprint(w, string(st2bytes))
+				require.NoError(t, err)
+			}
+		}
+	}
 	t.Run("Web and Writer params produces an error", func(t *testing.T) {
+		var payloads []graphQLQuery
+		srv := httptest.NewServer(handler(&payloads))
+		t.Cleanup(srv.Close)
+		atlasConfigURL := generateHCL(t, token, srv)
 		c, err := atlasexec.NewClient(".", "atlas")
 		require.NoError(t, err)
 		params := &atlasexec.MigrateLintParams{
@@ -224,21 +230,30 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		require.ErrorContains(t, err, "Writer or Web reporting are not supported")
 		require.Nil(t, got)
 	})
-	t.Run("lint parse web output", func(t *testing.T) {
+	t.Run("lint parse web output - no error", func(t *testing.T) {
+		var payloads []graphQLQuery
+		srv := httptest.NewServer(handler(&payloads))
+		t.Cleanup(srv.Close)
+		atlasConfigURL := generateHCL(t, token, srv)
 		c, err := atlasexec.NewClient(".", "atlas")
 		require.NoError(t, err)
 		var buf bytes.Buffer
-		require.NoError(t, c.MigrateLintError(context.Background(), &atlasexec.MigrateLintParams{
+		err = c.MigrateLintError(context.Background(), &atlasexec.MigrateLintParams{
 			DevURL:    "sqlite://file?mode=memory",
 			DirURL:    "file://testdata/migrations",
 			ConfigURL: atlasConfigURL,
 			Latest:    1,
 			Writer:    &buf,
 			Web:       true,
-		}))
+		})
+		require.NoError(t, err)
 		require.Equal(t, strings.TrimSpace(buf.String()), "https://migration-lint-report-url")
 	})
 	t.Run("lint uses --base", func(t *testing.T) {
+		var payloads []graphQLQuery
+		srv := httptest.NewServer(handler(&payloads))
+		t.Cleanup(srv.Close)
+		atlasConfigURL := generateHCL(t, token, srv)
 		c, err := atlasexec.NewClient(".", "atlas")
 		require.NoError(t, err)
 		summary, err := c.MigrateLint(context.Background(), &atlasexec.MigrateLintParams{
@@ -250,6 +265,54 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, summary)
 	})
+	t.Run("lint uses --context has error", func(t *testing.T) {
+		var payloads []graphQLQuery
+		srv := httptest.NewServer(handler(&payloads))
+		t.Cleanup(srv.Close)
+		atlasConfigURL := generateHCL(t, token, srv)
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		err = c.MigrateLintError(context.Background(), &atlasexec.MigrateLintParams{
+			DevURL:    "sqlite://file?mode=memory",
+			DirURL:    "file://testdata/migrations",
+			ConfigURL: atlasConfigURL,
+			Base:      "atlas://test-dir-slug",
+			Context:   `{"repo":"testing-repo", "path":"path/to/dir","branch":"testing-branch", "commit":"sha123"}`,
+			Web:       true,
+		})
+		require.ErrorContains(t, err, "atlas command exited with 1")
+		found := false
+		for _, query := range payloads {
+			if !strings.Contains(query.Query, "mutation reportMigrationLint") {
+				continue
+			}
+			found = true
+			require.NoError(t, json.Unmarshal(query.Variables, &query.MigrateLintReport))
+			require.Equal(t, "testing-branch", query.MigrateLintReport.Context.Branch)
+			require.Equal(t, "sha123", query.MigrateLintReport.Context.Commit)
+			require.Equal(t, "path/to/dir", query.MigrateLintReport.Context.Path)
+			require.Equal(t, "testing-repo", query.MigrateLintReport.Context.Repo)
+		}
+		require.True(t, found)
+	})
+}
+
+func generateHCL(t *testing.T, token string, srv *httptest.Server) string {
+	st := fmt.Sprintf(
+		`atlas { 
+			cloud {	
+				token = %q
+				url = %q
+			}
+		}
+		env "test" {}
+		`, token, srv.URL)
+	atlasConfigURL, clean, err := atlasexec.TempFile(st, "hcl")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, clean())
+	})
+	return atlasConfigURL
 }
 
 func Test_MigrateStatus(t *testing.T) {
