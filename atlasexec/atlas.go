@@ -220,7 +220,7 @@ func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (
 		args = append(args, strconv.FormatUint(params.Amount, 10))
 	}
 	args = append(args, params.Vars.AsArgs()...)
-	return jsonDecode[MigrateApply](c.runCommand(ctx, args, validJSON))
+	return jsonDecode[MigrateApply](c.runCommand(ctx, args))
 }
 
 // SchemaApply runs the 'schema apply' command.
@@ -253,7 +253,7 @@ func (c *Client) SchemaApply(ctx context.Context, params *SchemaApplyParams) (*S
 		args = append(args, "--exclude", strings.Join(params.Exclude, ","))
 	}
 	args = append(args, params.Vars.AsArgs()...)
-	return jsonDecode[SchemaApply](c.runCommand(ctx, args, validJSON))
+	return jsonDecode[SchemaApply](c.runCommand(ctx, args))
 }
 
 // SchemaInspect runs the 'schema inspect' command.
@@ -318,7 +318,7 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 	if params.Writer != nil || params.Web {
 		return nil, errors.New("atlasexec: Writer or Web reporting are not supported with MigrateLint, use MigrateLintError")
 	}
-	r, err := c.runCommand(ctx, lintArgs(params), validJSON)
+	r, err := c.runCommand(ctx, lintArgs(params))
 	return jsonDecode[SummaryReport](r, err)
 }
 
@@ -353,7 +353,7 @@ func (c *Client) MigrateStatus(ctx context.Context, params *MigrateStatusParams)
 		args = append(args, "--revisions-schema", params.RevisionsSchema)
 	}
 	args = append(args, params.Vars.AsArgs()...)
-	return jsonDecode[MigrateStatus](c.runCommand(ctx, args, validJSON))
+	return jsonDecode[MigrateStatus](c.runCommand(ctx, args))
 }
 
 var reVersion = regexp.MustCompile(`^atlas version v(\d+\.\d+.\d+)-?([a-z0-9]*)?`)
@@ -384,7 +384,7 @@ func (c *Client) Version(ctx context.Context) (*Version, error) {
 }
 
 // runCommand runs the given command and returns its output.
-func (c *Client) runCommand(ctx context.Context, args []string, vs ...validator) (io.Reader, error) {
+func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, error) {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, c.execPath, args...)
 	cmd.Dir = c.workingDir
@@ -411,12 +411,6 @@ func (c *Client) runCommand(ctx context.Context, args []string, vs ...validator)
 		default:
 			// When the exit code is not 1, it means that the
 			// command wasn't executed successfully.
-			return nil, err
-		}
-	}
-	out := stdout.Bytes()
-	for _, v := range vs {
-		if err := v(out); err != nil {
 			return nil, err
 		}
 	}
@@ -522,21 +516,16 @@ func jsonDecode[T any](r io.Reader, err error) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
-	var dst T
-	if err = json.NewDecoder(r).Decode(&dst); err != nil {
+	buf, err := io.ReadAll(r)
+	if err != nil {
 		return nil, err
 	}
-	return &dst, nil
-}
-
-type validator func([]byte) error
-
-func validJSON(d []byte) error {
-	if !json.Valid(d) {
-		return &cliError{
+	var dst T
+	if err = json.Unmarshal(buf, &dst); err != nil {
+		return nil, cliError{
 			summary: "Atlas CLI",
-			detail:  strings.TrimSpace(string(d)),
+			detail:  strings.TrimSpace(string(buf)),
 		}
 	}
-	return nil
+	return &dst, nil
 }
