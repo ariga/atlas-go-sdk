@@ -335,6 +335,7 @@ func (c *Client) MigrateLintError(ctx context.Context, params *MigrateLintParams
 	r, err := c.runCommand(ctx, lintArgs(params))
 	if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.stderr == "" {
 		r = strings.NewReader(cliErr.stdout)
+		err = fmt.Errorf("linting failed, for more details, go to %v", cliErr.stdout)
 	}
 	if params.Writer != nil && r != nil {
 		if _, ioErr := io.Copy(params.Writer, r); ioErr != nil {
