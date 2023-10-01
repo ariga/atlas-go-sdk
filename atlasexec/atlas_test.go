@@ -52,7 +52,7 @@ func Test_MigrateApply(t *testing.T) {
 	got, err := c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
 		Env: "test",
 	})
-	require.ErrorContains(t, err, `atlasexec: required flag "url" not set`)
+	require.ErrorContains(t, err, `required flag "url" not set`)
 	require.Nil(t, got)
 	// Set the env var and try again
 	os.Setenv("DB_URL", "sqlite://file?_fk=1&cache=shared&mode=memory")
