@@ -504,7 +504,6 @@ func jsonDecode[T any](r io.Reader, err error) (*T, error) {
 	var dst T
 	if err = json.Unmarshal(buf, &dst); err != nil {
 		return nil, cliError{
-			stderr: "",
 			stdout: string(buf),
 		}
 	}
