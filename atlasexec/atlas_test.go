@@ -131,9 +131,10 @@ func TestMigrateLint(t *testing.T) {
 			Latest: 1,
 			Writer: &buf,
 		})
-		require.ErrorContains(t, err, "destructive changes detected")
+		require.Equal(t, atlasexec.LintErr, err)
 		var raw json.RawMessage
 		require.NoError(t, json.NewDecoder(&buf).Decode(&raw))
+		require.Contains(t, string(raw), "destructive changes detected")
 	})
 	t.Run("lint uses --base and --latest", func(t *testing.T) {
 		c, err := atlasexec.NewClient(".", "atlas")
@@ -230,7 +231,27 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		require.ErrorContains(t, err, "Writer or Web reporting are not supported")
 		require.Nil(t, got)
 	})
-	t.Run("lint parse web output - no error", func(t *testing.T) {
+	t.Run("lint parse web output - no error - custom format", func(t *testing.T) {
+		var payloads []graphQLQuery
+		srv := httptest.NewServer(handler(&payloads))
+		t.Cleanup(srv.Close)
+		atlasConfigURL := generateHCL(t, token, srv)
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		var buf bytes.Buffer
+		err = c.MigrateLintError(context.Background(), &atlasexec.MigrateLintParams{
+			DevURL:    "sqlite://file?mode=memory",
+			DirURL:    "file://testdata/migrations",
+			ConfigURL: atlasConfigURL,
+			Latest:    1,
+			Writer:    &buf,
+			Format:    "{{ .URL }}",
+			Web:       true,
+		})
+		require.Equal(t, err, atlasexec.LintErr)
+		require.Equal(t, strings.TrimSpace(buf.String()), "https://migration-lint-report-url")
+	})
+	t.Run("lint parse web output - no error - default format", func(t *testing.T) {
 		var payloads []graphQLQuery
 		srv := httptest.NewServer(handler(&payloads))
 		t.Cleanup(srv.Close)
@@ -246,8 +267,10 @@ func TestMigrateLintWithLogin(t *testing.T) {
 			Writer:    &buf,
 			Web:       true,
 		})
-		require.NoError(t, err)
-		require.Equal(t, strings.TrimSpace(buf.String()), "https://migration-lint-report-url")
+		require.Equal(t, atlasexec.LintErr, err)
+		var sr atlasexec.SummaryReport
+		require.NoError(t, json.NewDecoder(&buf).Decode(&sr))
+		require.Equal(t, "https://migration-lint-report-url", sr.URL)
 	})
 	t.Run("lint uses --base", func(t *testing.T) {
 		var payloads []graphQLQuery
@@ -282,7 +305,10 @@ func TestMigrateLintWithLogin(t *testing.T) {
 			Writer:    &buf,
 			Web:       true,
 		})
-		require.ErrorContains(t, err, "https://migration-lint-report-url")
+		require.Equal(t, atlasexec.LintErr, err)
+		var sr atlasexec.SummaryReport
+		require.NoError(t, json.NewDecoder(&buf).Decode(&sr))
+		require.Equal(t, "https://migration-lint-report-url", sr.URL)
 		found := false
 		for _, query := range payloads {
 			if !strings.Contains(query.Query, "mutation reportMigrationLint") {
@@ -296,7 +322,6 @@ func TestMigrateLintWithLogin(t *testing.T) {
 			require.Equal(t, "testing-repo", query.MigrateLintReport.Context.Repo)
 		}
 		require.True(t, found)
-		require.Equal(t, strings.TrimSpace(buf.String()), "https://migration-lint-report-url")
 	})
 }
 
