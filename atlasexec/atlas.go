@@ -70,6 +70,7 @@ type (
 		Vars      Vars
 		Writer    io.Writer
 		Base      string
+		Format    string
 	}
 	// SchemaApplyParams are the parameters for the `schema apply` command.
 	SchemaApplyParams struct {
@@ -289,8 +290,6 @@ func lintArgs(params *MigrateLintParams) []string {
 	args := []string{"migrate", "lint"}
 	if params.Web {
 		args = append(args, "-w")
-	} else {
-		args = append(args, "--format", "{{ json . }}")
 	}
 	if params.Context != "" {
 		args = append(args, "--context", params.Context)
@@ -314,6 +313,11 @@ func lintArgs(params *MigrateLintParams) []string {
 		args = append(args, "--latest", strconv.FormatUint(params.Latest, 10))
 	}
 	args = append(args, params.Vars.AsArgs()...)
+	format := "{{ json . }}"
+	if params.Format != "" {
+		format = params.Format
+	}
+	args = append(args, "--format", format)
 	return args
 }
 
@@ -330,11 +334,31 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 	return jsonDecode[SummaryReport](r, err)
 }
 
-// MigrateLintError runs the 'migrate lint' command, the output is written to params.Writer
+// LintErr is returned when the 'migrate lint' finds a diagnostic that is configured to
+// be reported as an error, such as destructive changes by default.
+var LintErr = errors.New("lint error")
+
+// MigrateLintError runs the 'migrate lint' command, the output is written to params.Writer and reports
+// if an error occurred. If the error is a setup error, a cliError is returned. If the error is a lint error,
+// LintErr is returned.
 func (c *Client) MigrateLintError(ctx context.Context, params *MigrateLintParams) error {
 	r, err := c.runCommand(ctx, lintArgs(params))
-	if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.stderr == "" {
+	var (
+		cliErr cliError
+		isCLI  = errors.As(err, &cliErr)
+	)
+	// Setup errors.
+	if isCLI && cliErr.stderr != "" {
+		return cliErr
+	}
+	// Lint errors.
+	if isCLI && cliErr.stdout != "" {
+		err = LintErr
 		r = strings.NewReader(cliErr.stdout)
+	}
+	// Unknown errors.
+	if err != nil && !isCLI {
+		return err
 	}
 	if params.Writer != nil && r != nil {
 		if _, ioErr := io.Copy(params.Writer, r); ioErr != nil {
