@@ -63,6 +63,20 @@ func Test_MigrateApply(t *testing.T) {
 	require.EqualValues(t, "20230926085734", got.Target)
 }
 
+func TestBrokenApply(t *testing.T) {
+	c, err := atlasexec.NewClient(".", "atlas")
+	require.NoError(t, err)
+	got, err := c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
+		URL:    "sqlite://?mode=memory",
+		DirURL: "file://testdata/broken",
+	})
+	require.NoError(t, err)
+	require.EqualValues(t,
+		`sql/migrate: execute: executing statement "broken;" from version "20231029112426": near "broken": syntax error`,
+		got.Error,
+	)
+}
+
 func TestMigrateLint(t *testing.T) {
 	t.Run("with broken config", func(t *testing.T) {
 		c, err := atlasexec.NewClient(".", "atlas")
