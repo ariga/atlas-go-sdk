@@ -16,7 +16,6 @@ import (
 	"testing"
 
 	"ariga.io/atlas-go-sdk/atlasexec"
-	"ariga.io/atlas/cmd/atlas/x"
 	"ariga.io/atlas/sql/migrate"
 	"ariga.io/atlas/sql/sqlcheck"
 
@@ -120,7 +119,7 @@ func TestMigrateLint(t *testing.T) {
 		require.Equal(t, "testdata/migrations", got.Env.Dir)
 		require.Equal(t, "sqlite://file?mode=memory", got.Env.URL.String())
 		require.Equal(t, 1, len(got.Files))
-		expectedReport := &x.FileReport{
+		expectedReport := &atlasexec.FileReport{
 			Name: "20230926085734_destructive-change.sql",
 			Text: "DROP TABLE t2;\n",
 			Reports: []sqlcheck.Report{{
