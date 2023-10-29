@@ -3,7 +3,7 @@ package atlasexec
 import (
 	"time"
 
-	"ariga.io/atlas/cmd/atlas/x"
+	"ariga.io/atlas/sql/sqlcheck"
 	"ariga.io/atlas/sql/sqlclient"
 )
 
@@ -53,7 +53,43 @@ type (
 	}
 	// A SummaryReport contains a summary of the analysis of all files.
 	// It is used as an input to templates to report the CI results.
-	SummaryReport = x.SummaryReport
+	SummaryReport struct {
+		URL string `json:"URL,omitempty"` // URL of the report, if exists.
+
+		// Env holds the environment information.
+		Env struct {
+			Driver string         `json:"Driver,omitempty"` // Driver name.
+			URL    *sqlclient.URL `json:"URL,omitempty"`    // URL to dev database.
+			Dir    string         `json:"Dir,omitempty"`    // Path to migration directory.
+		}
+
+		// Schema versions found by the runner.
+		Schema struct {
+			Current string `json:"Current,omitempty"` // Current schema.
+			Desired string `json:"Desired,omitempty"` // Desired schema.
+		}
+
+		// Steps of the analysis. Added in verbose mode.
+		Steps []*StepReport `json:"Steps,omitempty"`
+
+		// Files reports. Non-empty in case there are findings.
+		Files []*FileReport `json:"Files,omitempty"`
+	}
+	// StepReport contains a summary of the analysis of a single step.
+	StepReport struct {
+		Name   string      `json:"Name,omitempty"`   // Step name.
+		Text   string      `json:"Text,omitempty"`   // Step description.
+		Error  string      `json:"Error,omitempty"`  // Error that cause the execution to halt.
+		Result *FileReport `json:"Result,omitempty"` // Result of the step. For example, a diagnostic.
+	}
+	// FileReport contains a summary of the analysis of a single file.
+	FileReport struct {
+		Name    string            `json:"Name,omitempty"`    // Name of the file.
+		Text    string            `json:"Text,omitempty"`    // Contents of the file.
+		Reports []sqlcheck.Report `json:"Reports,omitempty"` // List of reports.
+		Error   string            `json:"Error,omitempty"`   // File specific error.
+	}
+
 	// StmtError groups a statement with its execution error.
 	StmtError struct {
 		Stmt string `json:"Stmt,omitempty"` // SQL statement that failed.
@@ -106,3 +142,14 @@ type (
 	// Deprecated: use MigrateApply instead
 	ApplyReport = MigrateApply
 )
+
+// DiagnosticsCount returns the total number of diagnostics in the report.
+func (r *SummaryReport) DiagnosticsCount() int {
+	var n int
+	for _, f := range r.Files {
+		for _, r := range f.Reports {
+			n += len(r.Diagnostics)
+		}
+	}
+	return n
+}
