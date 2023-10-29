@@ -84,7 +84,7 @@ func TestMigrateLint(t *testing.T) {
 		got, err := c.MigrateLint(context.Background(), &atlasexec.MigrateLintParams{
 			ConfigURL: "file://config-broken.hcl",
 		})
-		require.ErrorContains(t, err, `project file "config-broken.hcl" was not found`)
+		require.ErrorContains(t, err, `file "config-broken.hcl" was not found`)
 		require.Nil(t, got)
 	})
 	t.Run("with broken dev-url", func(t *testing.T) {
