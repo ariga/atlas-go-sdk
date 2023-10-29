@@ -194,7 +194,8 @@ func (c *Client) MigratePush(ctx context.Context, params *MigratePushParams) (st
 	return strings.TrimSpace(resp), err
 }
 
-// MigrateApply runs the 'migrate apply' command.
+// MigrateApply runs the 'migrate apply' command. If the underlying command returns an error, but prints to stdout
+// it will be returned as a MigrateApply with the error message in the Error field.
 func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (*MigrateApply, error) {
 	args := []string{"migrate", "apply", "--format", "{{ json . }}"}
 	if params.Env != "" {
@@ -222,7 +223,12 @@ func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (
 		args = append(args, strconv.FormatUint(params.Amount, 10))
 	}
 	args = append(args, params.Vars.AsArgs()...)
-	return jsonDecode[MigrateApply](c.runCommand(ctx, args))
+	r, err := c.runCommand(ctx, args)
+	if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.stderr == "" {
+		r = strings.NewReader(cliErr.stdout)
+		err = nil
+	}
+	return jsonDecode[MigrateApply](r, err)
 }
 
 // SchemaApply runs the 'schema apply' command.
