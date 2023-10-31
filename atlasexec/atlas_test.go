@@ -24,6 +24,45 @@ import (
 )
 
 func Test_MigrateApply(t *testing.T) {
+	ec, err := atlasexec.NewWorkingDir(
+		atlasexec.WithMigrations(os.DirFS(filepath.Join("testdata", "migrations"))),
+		atlasexec.WithAtlasHCL(func(w io.Writer) error {
+			_, err := w.Write([]byte(`
+			variable "url" {
+				type    = string
+				default = getenv("DB_URL")
+			}
+			env {
+				name = atlas.env
+				url  = var.url
+				migration {
+					dir = "file://migrations"
+				}
+			}`))
+			return err
+		}),
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, ec.Close())
+	})
+	c, err := atlasexec.NewClient(ec.Path(), "atlas")
+	require.NoError(t, err)
+	got, err := c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
+		Env: "test",
+	})
+	require.ErrorContains(t, err, `required flag "url" not set`)
+	require.Nil(t, got)
+	// Set the env var and try again
+	os.Setenv("DB_URL", "sqlite://file?_fk=1&cache=shared&mode=memory")
+	got, err = c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
+		Env: "test",
+	})
+	require.NoError(t, err)
+	require.EqualValues(t, "20230926085734", got.Target)
+}
+
+func Test_MigrateApplyWithRemote(t *testing.T) {
 	type (
 		ContextInput struct {
 			TriggerType    string `json:"triggerType,omitempty"`
@@ -55,19 +94,11 @@ func Test_MigrateApply(t *testing.T) {
 		atlasexec.WithMigrations(os.DirFS(filepath.Join("testdata", "migrations"))),
 		atlasexec.WithAtlasHCL(func(w io.Writer) error {
 			_, err := fmt.Fprintf(w, `
-			variable "url" {
-				type    = string
-				default = getenv("DB_URL")
-			}
-			variable "test_dir" {
-				type    = string
-				default = getenv("TEST_DIR")
-			}
 			env {
 				name = atlas.env
-				url  = var.url
+				url  = "sqlite://file?_fk=1&cache=shared&mode=memory"
 				migration {
-					dir = var.test_dir
+					dir = "atlas://test_dir"
 				}
 			}
 			atlas {
@@ -85,39 +116,25 @@ func Test_MigrateApply(t *testing.T) {
 	})
 	c, err := atlasexec.NewClient(ec.Path(), "atlas")
 	require.NoError(t, err)
-	os.Setenv("TEST_DIR", "file://migrations")
 	got, err := c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
 		Env: "test",
 	})
-	require.ErrorContains(t, err, `required flag "url" not set`)
-	require.Nil(t, got)
-	// Set the env var and try again
-	os.Setenv("DB_URL", "sqlite://file?_fk=1&cache=shared&mode=memory")
-	got, err = c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
-		Env: "test",
-	})
 	require.NoError(t, err)
-	require.EqualValues(t, "20230926085734", got.Target)
-	// set remote migration directory
-	os.Setenv("TEST_DIR", "atlas://test_dir")
-	got, err = c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
-		Env: "test",
-	})
-	require.NoError(t, err)
-	require.Len(t, payloads, 5)
-	reportPayload := payloads[4]
+	require.NotNil(t, got)
+	require.Len(t, payloads, 3)
+	reportPayload := payloads[2]
 	require.Regexp(t, "mutation ReportMigration", reportPayload.Query)
 	err = json.Unmarshal(reportPayload.Variables, &reportPayload.MigrateApplyReport)
 	require.NoError(t, err)
 	require.Nil(t, reportPayload.MigrateApplyReport.Input.Context)
-	// set context field
 	got, err = c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
 		Env:     "test",
 		Context: `{ "triggerVersion": "1.2.3", "triggerType": "GITHUB_ACTION" }`,
 	})
 	require.NoError(t, err)
-	require.Len(t, payloads, 8)
-	reportPayload = payloads[7]
+	require.NotNil(t, got)
+	require.Len(t, payloads, 6)
+	reportPayload = payloads[5]
 	require.Regexp(t, "mutation ReportMigration", reportPayload.Query)
 	err = json.Unmarshal(reportPayload.Variables, &reportPayload.MigrateApplyReport)
 	require.NoError(t, err)
