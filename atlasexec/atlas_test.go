@@ -24,21 +24,58 @@ import (
 )
 
 func Test_MigrateApply(t *testing.T) {
+	type (
+		ContextInput struct {
+			TriggerType    string `json:"triggerType,omitempty"`
+			TriggerVersion string `json:"triggerVersion,omitempty"`
+		}
+		graphQLQuery struct {
+			Query              string          `json:"query"`
+			Variables          json.RawMessage `json:"variables"`
+			MigrateApplyReport struct {
+				Input struct {
+					Context *ContextInput `json:"context,omitempty"`
+				} `json:"input"`
+			}
+		}
+	)
+	token := "123456789"
+	handler := func(payloads *[]graphQLQuery) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			require.Equal(t, "Bearer "+token, r.Header.Get("Authorization"))
+			var query graphQLQuery
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&query))
+			*payloads = append(*payloads, query)
+		}
+	}
+	var payloads []graphQLQuery
+	srv := httptest.NewServer(handler(&payloads))
+	t.Cleanup(srv.Close)
 	ec, err := atlasexec.NewWorkingDir(
 		atlasexec.WithMigrations(os.DirFS(filepath.Join("testdata", "migrations"))),
 		atlasexec.WithAtlasHCL(func(w io.Writer) error {
-			_, err := w.Write([]byte(`
+			_, err := fmt.Fprintf(w, `
 			variable "url" {
 				type    = string
 				default = getenv("DB_URL")
+			}
+			variable "test_dir" {
+				type    = string
+				default = getenv("TEST_DIR")
 			}
 			env {
 				name = atlas.env
 				url  = var.url
 				migration {
-					dir = "file://migrations"
+					dir = var.test_dir
 				}
-			}`))
+			}
+			atlas {
+				cloud {
+					token = %q
+					url = %q
+				}
+			}`, token, srv.URL)
 			return err
 		}),
 	)
@@ -48,6 +85,7 @@ func Test_MigrateApply(t *testing.T) {
 	})
 	c, err := atlasexec.NewClient(ec.Path(), "atlas")
 	require.NoError(t, err)
+	os.Setenv("TEST_DIR", "file://migrations")
 	got, err := c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
 		Env: "test",
 	})
@@ -60,6 +98,32 @@ func Test_MigrateApply(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.EqualValues(t, "20230926085734", got.Target)
+	// set remote migration directory
+	os.Setenv("TEST_DIR", "atlas://test_dir")
+	got, err = c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
+		Env: "test",
+	})
+	require.NoError(t, err)
+	require.Len(t, payloads, 5)
+	reportPayload := payloads[4]
+	require.Regexp(t, "mutation ReportMigration", reportPayload.Query)
+	err = json.Unmarshal(reportPayload.Variables, &reportPayload.MigrateApplyReport)
+	require.NoError(t, err)
+	require.Nil(t, reportPayload.MigrateApplyReport.Input.Context)
+	// set context field
+	got, err = c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
+		Env:     "test",
+		Context: `{ "triggerVersion": "1.2.3", "triggerType": "GITHUB_ACTION" }`,
+	})
+	require.NoError(t, err)
+	require.Len(t, payloads, 8)
+	reportPayload = payloads[7]
+	require.Regexp(t, "mutation ReportMigration", reportPayload.Query)
+	err = json.Unmarshal(reportPayload.Variables, &reportPayload.MigrateApplyReport)
+	require.NoError(t, err)
+	require.NotNil(t, reportPayload.MigrateApplyReport.Input.Context)
+	require.Equal(t, "GITHUB_ACTION", reportPayload.MigrateApplyReport.Input.Context.TriggerType)
+	require.Equal(t, "1.2.3", reportPayload.MigrateApplyReport.Input.Context.TriggerVersion)
 }
 
 func TestBrokenApply(t *testing.T) {

@@ -41,6 +41,7 @@ type (
 	MigrateApplyParams struct {
 		Env             string
 		ConfigURL       string
+		Context         string
 		DirURL          string
 		URL             string
 		RevisionsSchema string
@@ -203,6 +204,9 @@ func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (
 	}
 	if params.ConfigURL != "" {
 		args = append(args, "--config", params.ConfigURL)
+	}
+	if params.Context != "" {
+		args = append(args, "--context", params.Context)
 	}
 	if params.URL != "" {
 		args = append(args, "--url", params.URL)
