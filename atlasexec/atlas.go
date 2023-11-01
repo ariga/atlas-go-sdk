@@ -37,6 +37,7 @@ type (
 		Env         string
 		Vars        Vars
 	}
+	// DeployRunContext describes what triggered this command (e.g., GitHub Action, v1.2.3)
 	DeployRunContext struct {
 		TriggerType    string `json:"triggerType,omitempty"`
 		TriggerVersion string `json:"triggerVersion,omitempty"`
