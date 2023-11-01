@@ -37,7 +37,7 @@ type (
 		Env         string
 		Vars        Vars
 	}
-	DeployContextInput struct {
+	DeployRunContext struct {
 		TriggerType    string `json:"triggerType,omitempty"`
 		TriggerVersion string `json:"triggerVersion,omitempty"`
 	}
@@ -45,7 +45,7 @@ type (
 	MigrateApplyParams struct {
 		Env             string
 		ConfigURL       string
-		Context         *DeployContextInput
+		Context         *DeployRunContext
 		DirURL          string
 		URL             string
 		RevisionsSchema string
