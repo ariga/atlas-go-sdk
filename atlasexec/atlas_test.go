@@ -455,13 +455,17 @@ func TestMigratePush(t *testing.T) {
 				require.Equal(t, "Bearer "+token, r.Header.Get("Authorization"))
 				var query graphQLQuery
 				require.NoError(t, json.NewDecoder(r.Body).Decode(&query))
-				tt.payloads = append(tt.payloads, query)
 				if strings.Contains(query.Query, "pushDir") {
+					err := json.Unmarshal(query.Variables, &query.PushDir)
+					require.NoError(t, err)
 					fmt.Fprint(w, `{"data":{"pushDir":{"url":"https://some-org.atlasgo.cloud/dirs/314159/tags/12345"}}}`)
 				}
 				if strings.Contains(query.Query, "syncDir") {
+					err := json.Unmarshal(query.Variables, &query.SyncDir)
+					require.NoError(t, err)
 					fmt.Fprint(w, `{"data":{"syncDir":{"url":"https://some-org.atlasgo.cloud/dirs/314159/tags/12345"}}}`)
 				}
+				tt.payloads = append(tt.payloads, query)
 			}
 		}
 		tt.srv = httptest.NewServer(handler())
@@ -489,12 +493,10 @@ func TestMigratePush(t *testing.T) {
 			params.ConfigURL = atlasConfigURL
 			got, err := c.MigratePush(context.Background(), params)
 			require.NoError(t, err)
-			require.NotEqual(t, "1234", got)
 			require.Len(t, tt.payloads, 2)
+			require.Equal(t, `https://some-org.atlasgo.cloud/dirs/314159/tags/12345`, got)
 			p := &tt.payloads[1]
 			require.Contains(t, p.Query, "syncDir")
-			err = json.Unmarshal(p.Variables, &p.SyncDir)
-			require.NoError(t, err)
 			require.Equal(t, "test-dir-slug", p.SyncDir.Input.Slug)
 			require.Equal(t, "SQLITE", p.SyncDir.Input.Driver)
 			require.NotEmpty(t, p.SyncDir.Input.Dir)
@@ -505,15 +507,12 @@ func TestMigratePush(t *testing.T) {
 			params.Context = inputContext
 			got, err := c.MigratePush(context.Background(), params)
 			require.NoError(t, err)
-			require.NotEqual(t, "1234", got)
+			require.Equal(t, `https://some-org.atlasgo.cloud/dirs/314159/tags/12345`, got)
 			require.Len(t, tt.payloads, 2)
 			p := &tt.payloads[1]
 			require.Contains(t, p.Query, "syncDir")
 			err = json.Unmarshal(p.Variables, &p.SyncDir)
 			require.NoError(t, err)
-			require.Equal(t, "test-dir-slug", p.SyncDir.Input.Slug)
-			require.Equal(t, "SQLITE", p.SyncDir.Input.Driver)
-			require.NotEmpty(t, p.SyncDir.Input.Dir)
 			require.Equal(t, inputContext, p.SyncDir.Input.Context)
 		})
 
@@ -531,12 +530,10 @@ func TestMigratePush(t *testing.T) {
 		}
 		got, err := c.MigratePush(context.Background(), params)
 		require.NoError(t, err)
-		require.NotEqual(t, "1234", got)
+		require.Equal(t, `https://some-org.atlasgo.cloud/dirs/314159/tags/12345`, got)
 		require.Len(t, tt.payloads, 2)
 		p := &tt.payloads[1]
 		require.Contains(t, p.Query, "pushDir")
-		err = json.Unmarshal(p.Variables, &p.PushDir)
-		require.NoError(t, err)
 		require.Equal(t, "test-dir-slug", p.PushDir.Input.Slug)
 		require.Equal(t, "SQLITE", p.PushDir.Input.Driver)
 		require.Equal(t, "this-is-my-tag", p.PushDir.Input.Tag)
