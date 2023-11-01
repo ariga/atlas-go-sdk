@@ -64,6 +64,7 @@ type (
 		RevisionsSchema string
 		Vars            Vars
 	}
+	// RunContext describes what triggered this command (e.g., GitHub Action)"
 	RunContext struct {
 		Repo   string `json:"repo"`
 		Path   string `json:"path"`
