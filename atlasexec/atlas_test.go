@@ -129,7 +129,7 @@ func Test_MigrateApplyWithRemote(t *testing.T) {
 	require.Nil(t, reportPayload.MigrateApplyReport.Input.Context)
 	got, err = c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
 		Env:     "test",
-		Context: `{ "triggerVersion": "1.2.3", "triggerType": "GITHUB_ACTION" }`,
+		Context: &atlasexec.DeployRunContext{TriggerVersion: "1.2.3", TriggerType: "GITHUB_ACTION"},
 	})
 	require.NoError(t, err)
 	require.NotNil(t, got)

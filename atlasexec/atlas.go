@@ -37,11 +37,16 @@ type (
 		Env         string
 		Vars        Vars
 	}
+	// DeployRunContext describes what triggered this command (e.g., GitHub Action, v1.2.3)
+	DeployRunContext struct {
+		TriggerType    string `json:"triggerType,omitempty"`
+		TriggerVersion string `json:"triggerVersion,omitempty"`
+	}
 	// MigrateApplyParams are the parameters for the `migrate apply` command.
 	MigrateApplyParams struct {
 		Env             string
 		ConfigURL       string
-		Context         string
+		Context         *DeployRunContext
 		DirURL          string
 		URL             string
 		RevisionsSchema string
@@ -205,8 +210,12 @@ func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (
 	if params.ConfigURL != "" {
 		args = append(args, "--config", params.ConfigURL)
 	}
-	if params.Context != "" {
-		args = append(args, "--context", params.Context)
+	if params.Context != nil {
+		buf, err := json.Marshal(params.Context)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, "--context", string(buf))
 	}
 	if params.URL != "" {
 		args = append(args, "--url", params.URL)
