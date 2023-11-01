@@ -64,13 +64,21 @@ type (
 		RevisionsSchema string
 		Vars            Vars
 	}
+	// RunContext describes what triggered this command (e.g., GitHub Action).
+	RunContext struct {
+		Repo   string `json:"repo,omitempty"`
+		Path   string `json:"path,omitempty"`
+		Branch string `json:"branch,omitempty"`
+		Commit string `json:"commit,omitempty"`
+		URL    string `json:"url,omitempty"`
+	}
 	// MigrateLintParams are the parameters for the `migrate lint` command.
 	MigrateLintParams struct {
 		Env       string
 		ConfigURL string
 		DevURL    string
 		DirURL    string
-		Context   string
+		Context   *RunContext
 		Web       bool
 		Latest    uint64
 		Vars      Vars
@@ -305,13 +313,17 @@ func (c *Client) SchemaInspect(ctx context.Context, params *SchemaInspectParams)
 	return stringVal(c.runCommand(ctx, args))
 }
 
-func lintArgs(params *MigrateLintParams) []string {
+func lintArgs(params *MigrateLintParams) ([]string, error) {
 	args := []string{"migrate", "lint"}
 	if params.Web {
 		args = append(args, "-w")
 	}
-	if params.Context != "" {
-		args = append(args, "--context", params.Context)
+	if params.Context != nil {
+		buf, err := json.Marshal(params.Context)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, "--context", string(buf))
 	}
 	if params.Env != "" {
 		args = append(args, "--env", params.Env)
@@ -337,7 +349,7 @@ func lintArgs(params *MigrateLintParams) []string {
 		format = params.Format
 	}
 	args = append(args, "--format", format)
-	return args
+	return args, nil
 }
 
 // MigrateLint runs the 'migrate lint' command.
@@ -345,7 +357,11 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 	if params.Writer != nil || params.Web {
 		return nil, errors.New("atlasexec: Writer or Web reporting are not supported with MigrateLint, use MigrateLintError")
 	}
-	r, err := c.runCommand(ctx, lintArgs(params))
+	args, err := lintArgs(params)
+	if err != nil {
+		return nil, err
+	}
+	r, err := c.runCommand(ctx, args)
 	if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.stderr == "" {
 		r = strings.NewReader(cliErr.stdout)
 		err = nil
@@ -361,7 +377,11 @@ var LintErr = errors.New("lint error")
 // if an error occurred. If the error is a setup error, a cliError is returned. If the error is a lint error,
 // LintErr is returned.
 func (c *Client) MigrateLintError(ctx context.Context, params *MigrateLintParams) error {
-	r, err := c.runCommand(ctx, lintArgs(params))
+	args, err := lintArgs(params)
+	if err != nil {
+		return err
+	}
+	r, err := c.runCommand(ctx, args)
 	var (
 		cliErr cliError
 		isCLI  = errors.As(err, &cliErr)
