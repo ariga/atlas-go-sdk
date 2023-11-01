@@ -211,11 +211,11 @@ func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (
 		args = append(args, "--config", params.ConfigURL)
 	}
 	if params.Context != nil {
-		ctxJson, err := json.Marshal(params.Context)
+		buf, err := json.Marshal(params.Context)
 		if err != nil {
 			return nil, err
 		}
-		args = append(args, "--context", string(ctxJson))
+		args = append(args, "--context", string(buf))
 	}
 	if params.URL != "" {
 		args = append(args, "--url", params.URL)
