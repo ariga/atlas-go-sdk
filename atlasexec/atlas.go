@@ -64,13 +64,13 @@ type (
 		RevisionsSchema string
 		Vars            Vars
 	}
-	// RunContext describes what triggered this command (e.g., GitHub Action)"
+	// RunContext describes what triggered this command (e.g., GitHub Action).
 	RunContext struct {
-		Repo   string `json:"repo"`
-		Path   string `json:"path"`
-		Branch string `json:"branch"`
-		Commit string `json:"commit"`
-		URL    string `json:"url"`
+		Repo   string `json:"repo,omitempty"`
+		Path   string `json:"path,omitempty"`
+		Branch string `json:"branch,omitempty"`
+		Commit string `json:"commit,omitempty"`
+		URL    string `json:"url,omitempty"`
 	}
 	// MigrateLintParams are the parameters for the `migrate lint` command.
 	MigrateLintParams struct {
