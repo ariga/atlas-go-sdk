@@ -32,7 +32,7 @@ type (
 		DirURL      string
 		DirFormat   string
 		LockTimeout string
-		Context     string
+		Context     *RunContext
 		ConfigURL   string
 		Env         string
 		Vars        Vars
@@ -186,8 +186,12 @@ func (c *Client) MigratePush(ctx context.Context, params *MigratePushParams) (st
 	if params.LockTimeout != "" {
 		args = append(args, "--lock-timeout", params.LockTimeout)
 	}
-	if params.Context != "" {
-		args = append(args, "--context", params.Context)
+	if params.Context != nil {
+		buf, err := json.Marshal(params.Context)
+		if err != nil {
+			return "", err
+		}
+		args = append(args, "--context", string(buf))
 	}
 	if params.ConfigURL != "" {
 		args = append(args, "--config", params.ConfigURL)
