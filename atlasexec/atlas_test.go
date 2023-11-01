@@ -246,14 +246,8 @@ func TestMigrateLint(t *testing.T) {
 
 func TestMigrateLintWithLogin(t *testing.T) {
 	type (
-		ContextInput struct {
-			Repo   string `json:"repo"`
-			Path   string `json:"path"`
-			Branch string `json:"branch"`
-			Commit string `json:"commit"`
-		}
 		migrateLintReport struct {
-			Context *ContextInput `json:"context"`
+			Context *atlasexec.LintContextInput `json:"context"`
 		}
 		graphQLQuery struct {
 			Query             string          `json:"query"`
@@ -395,9 +389,15 @@ func TestMigrateLintWithLogin(t *testing.T) {
 			DirURL:    "file://testdata/migrations",
 			ConfigURL: atlasConfigURL,
 			Base:      "atlas://test-dir-slug",
-			Context:   `{"repo":"testing-repo", "path":"path/to/dir","branch":"testing-branch", "commit":"sha123"}`,
-			Writer:    &buf,
-			Web:       true,
+			Context: &atlasexec.LintContextInput{
+				Repo:   "testing-repo",
+				Path:   "path/to/dir",
+				Branch: "testing-branch",
+				Commit: "sha123",
+				URL:    "this://is/a/url",
+			},
+			Writer: &buf,
+			Web:    true,
 		})
 		require.Equal(t, atlasexec.LintErr, err)
 		var sr atlasexec.SummaryReport
@@ -414,6 +414,7 @@ func TestMigrateLintWithLogin(t *testing.T) {
 			require.Equal(t, "sha123", query.MigrateLintReport.Context.Commit)
 			require.Equal(t, "path/to/dir", query.MigrateLintReport.Context.Path)
 			require.Equal(t, "testing-repo", query.MigrateLintReport.Context.Repo)
+			require.Equal(t, "this://is/a/url", query.MigrateLintReport.Context.URL)
 		}
 		require.True(t, found)
 	})
