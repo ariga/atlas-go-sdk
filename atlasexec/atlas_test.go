@@ -247,7 +247,7 @@ func TestMigrateLint(t *testing.T) {
 func TestMigrateLintWithLogin(t *testing.T) {
 	type (
 		migrateLintReport struct {
-			Context *atlasexec.LintContextInput `json:"context"`
+			Context *atlasexec.ContextInput `json:"context"`
 		}
 		graphQLQuery struct {
 			Query             string          `json:"query"`
@@ -389,7 +389,7 @@ func TestMigrateLintWithLogin(t *testing.T) {
 			DirURL:    "file://testdata/migrations",
 			ConfigURL: atlasConfigURL,
 			Base:      "atlas://test-dir-slug",
-			Context: &atlasexec.LintContextInput{
+			Context: &atlasexec.ContextInput{
 				Repo:   "testing-repo",
 				Path:   "path/to/dir",
 				Branch: "testing-branch",

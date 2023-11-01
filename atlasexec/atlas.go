@@ -64,7 +64,7 @@ type (
 		RevisionsSchema string
 		Vars            Vars
 	}
-	LintContextInput struct {
+	ContextInput struct {
 		Repo   string `json:"repo"`
 		Path   string `json:"path"`
 		Branch string `json:"branch"`
@@ -77,7 +77,7 @@ type (
 		ConfigURL string
 		DevURL    string
 		DirURL    string
-		Context   *LintContextInput
+		Context   *ContextInput
 		Web       bool
 		Latest    uint64
 		Vars      Vars
