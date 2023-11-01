@@ -64,7 +64,7 @@ func Test_MigrateApply(t *testing.T) {
 
 func Test_MigrateApplyWithRemote(t *testing.T) {
 	type (
-		ContextInput struct {
+		RunContext struct {
 			TriggerType    string `json:"triggerType,omitempty"`
 			TriggerVersion string `json:"triggerVersion,omitempty"`
 		}
@@ -73,7 +73,7 @@ func Test_MigrateApplyWithRemote(t *testing.T) {
 			Variables          json.RawMessage `json:"variables"`
 			MigrateApplyReport struct {
 				Input struct {
-					Context *ContextInput `json:"context,omitempty"`
+					Context *RunContext `json:"context,omitempty"`
 				} `json:"input"`
 			}
 		}
@@ -417,6 +417,127 @@ func TestMigrateLintWithLogin(t *testing.T) {
 			require.Equal(t, "this://is/a/url", query.MigrateLintReport.Context.URL)
 		}
 		require.True(t, found)
+	})
+}
+
+func TestMigratePush(t *testing.T) {
+	type (
+		graphQLQuery struct {
+			Query     string          `json:"query"`
+			Variables json.RawMessage `json:"variables"`
+			PushDir   *struct {
+				Input struct {
+					Slug   string `json:"slug"`
+					Tag    string `json:"tag"`
+					Driver string `json:"driver"`
+					Dir    string `json:"dir"`
+				} `json:"input"`
+			}
+			SyncDir *struct {
+				Input struct {
+					Slug    string                `json:"slug"`
+					Driver  string                `json:"driver"`
+					Dir     string                `json:"dir"`
+					Context *atlasexec.RunContext `json:"context"`
+				} `json:"input"`
+			}
+		}
+		httpTest struct {
+			payloads []graphQLQuery
+			srv      *httptest.Server
+		}
+	)
+	token := "123456789"
+	newHTTPTest := func() (*httpTest, string) {
+		tt := &httpTest{}
+		handler := func() http.HandlerFunc {
+			return func(w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, "Bearer "+token, r.Header.Get("Authorization"))
+				var query graphQLQuery
+				require.NoError(t, json.NewDecoder(r.Body).Decode(&query))
+				if strings.Contains(query.Query, "pushDir") {
+					err := json.Unmarshal(query.Variables, &query.PushDir)
+					require.NoError(t, err)
+					fmt.Fprint(w, `{"data":{"pushDir":{"url":"https://some-org.atlasgo.cloud/dirs/314159/tags/12345"}}}`)
+				}
+				if strings.Contains(query.Query, "syncDir") {
+					err := json.Unmarshal(query.Variables, &query.SyncDir)
+					require.NoError(t, err)
+					fmt.Fprint(w, `{"data":{"syncDir":{"url":"https://some-org.atlasgo.cloud/dirs/314159/tags/12345"}}}`)
+				}
+				tt.payloads = append(tt.payloads, query)
+			}
+		}
+		tt.srv = httptest.NewServer(handler())
+		t.Cleanup(tt.srv.Close)
+		return tt, generateHCL(t, token, tt.srv)
+	}
+	c, err := atlasexec.NewClient(".", "atlas")
+	require.NoError(t, err)
+	inputContext := &atlasexec.RunContext{
+		Repo:   "testing-repo",
+		Path:   "path/to/dir",
+		Branch: "testing-branch",
+		Commit: "sha123",
+		URL:    "this://is/a/url",
+	}
+	t.Run("sync", func(t *testing.T) {
+		params := &atlasexec.MigratePushParams{
+			DevURL: "sqlite://file?mode=memory",
+			DirURL: "file://testdata/migrations",
+			Name:   "test-dir-slug",
+			Env:    "test",
+		}
+		t.Run("with context", func(t *testing.T) {
+			tt, atlasConfigURL := newHTTPTest()
+			params.ConfigURL = atlasConfigURL
+			got, err := c.MigratePush(context.Background(), params)
+			require.NoError(t, err)
+			require.Len(t, tt.payloads, 2)
+			require.Equal(t, `https://some-org.atlasgo.cloud/dirs/314159/tags/12345`, got)
+			p := &tt.payloads[1]
+			require.Contains(t, p.Query, "syncDir")
+			require.Equal(t, "test-dir-slug", p.SyncDir.Input.Slug)
+			require.Equal(t, "SQLITE", p.SyncDir.Input.Driver)
+			require.NotEmpty(t, p.SyncDir.Input.Dir)
+		})
+		t.Run("without context", func(t *testing.T) {
+			tt, atlasConfigURL := newHTTPTest()
+			params.ConfigURL = atlasConfigURL
+			params.Context = inputContext
+			got, err := c.MigratePush(context.Background(), params)
+			require.NoError(t, err)
+			require.Equal(t, `https://some-org.atlasgo.cloud/dirs/314159/tags/12345`, got)
+			require.Len(t, tt.payloads, 2)
+			p := &tt.payloads[1]
+			require.Contains(t, p.Query, "syncDir")
+			err = json.Unmarshal(p.Variables, &p.SyncDir)
+			require.NoError(t, err)
+			require.Equal(t, inputContext, p.SyncDir.Input.Context)
+		})
+
+	})
+	t.Run("push", func(t *testing.T) {
+		tt, atlasConfigURL := newHTTPTest()
+		params := &atlasexec.MigratePushParams{
+			ConfigURL: atlasConfigURL,
+			DevURL:    "sqlite://file?mode=memory",
+			DirURL:    "file://testdata/migrations",
+			Name:      "test-dir-slug",
+			Context:   inputContext,
+			Env:       "test",
+			Tag:       "this-is-my-tag",
+		}
+		got, err := c.MigratePush(context.Background(), params)
+		require.NoError(t, err)
+		require.Equal(t, `https://some-org.atlasgo.cloud/dirs/314159/tags/12345`, got)
+		require.Len(t, tt.payloads, 2)
+		p := &tt.payloads[1]
+		require.Contains(t, p.Query, "pushDir")
+		require.Equal(t, "test-dir-slug", p.PushDir.Input.Slug)
+		require.Equal(t, "SQLITE", p.PushDir.Input.Driver)
+		require.Equal(t, "this-is-my-tag", p.PushDir.Input.Tag)
+		require.NotEmpty(t, p.PushDir.Input.Dir)
 	})
 }
 
