@@ -448,7 +448,7 @@ func TestMigratePush(t *testing.T) {
 		}
 	)
 	token := "123456789"
-	newHttpTest := func() (*httpTest, string) {
+	newHTTPTest := func() (*httpTest, string) {
 		tt := &httpTest{}
 		handler := func() http.HandlerFunc {
 			return func(w http.ResponseWriter, r *http.Request) {
@@ -485,7 +485,7 @@ func TestMigratePush(t *testing.T) {
 			Env:    "test",
 		}
 		t.Run("with context", func(t *testing.T) {
-			tt, atlasConfigURL := newHttpTest()
+			tt, atlasConfigURL := newHTTPTest()
 			params.ConfigURL = atlasConfigURL
 			got, err := c.MigratePush(context.Background(), params)
 			require.NoError(t, err)
@@ -500,7 +500,7 @@ func TestMigratePush(t *testing.T) {
 			require.NotEmpty(t, p.SyncDir.Input.Dir)
 		})
 		t.Run("without context", func(t *testing.T) {
-			tt, atlasConfigURL := newHttpTest()
+			tt, atlasConfigURL := newHTTPTest()
 			params.ConfigURL = atlasConfigURL
 			params.Context = inputContext
 			got, err := c.MigratePush(context.Background(), params)
@@ -519,7 +519,7 @@ func TestMigratePush(t *testing.T) {
 
 	})
 	t.Run("push", func(t *testing.T) {
-		tt, atlasConfigURL := newHttpTest()
+		tt, atlasConfigURL := newHTTPTest()
 		params := &atlasexec.MigratePushParams{
 			ConfigURL: atlasConfigURL,
 			DevURL:    "sqlite://file?mode=memory",
