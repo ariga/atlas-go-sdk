@@ -37,10 +37,12 @@ type (
 		Env         string
 		Vars        Vars
 	}
+	// TriggerType defines the type for the "trigger_type" enum field.
+	TriggerType string
 	// DeployRunContext describes what triggered this command (e.g., GitHub Action, v1.2.3)
 	DeployRunContext struct {
-		TriggerType    string `json:"triggerType,omitempty"`
-		TriggerVersion string `json:"triggerVersion,omitempty"`
+		TriggerType    TriggerType `json:"triggerType,omitempty"`
+		TriggerVersion string      `json:"triggerVersion,omitempty"`
 	}
 	// MigrateApplyParams are the parameters for the `migrate apply` command.
 	MigrateApplyParams struct {
@@ -119,6 +121,14 @@ type (
 	StatusParams = MigrateStatusParams
 	// Deprecated: use MigrateLintParams instead.
 	LintParams = MigrateLintParams
+)
+
+// TriggerType values.
+const (
+	TriggerTypeCLI          TriggerType = "CLI"
+	TriggerTypeKubernetes   TriggerType = "KUBERNETES"
+	TriggerTypeTerraform    TriggerType = "TERRAFORM"
+	TriggerTypeGithubAction TriggerType = "GITHUB_ACTION"
 )
 
 // NewClient returns a new Atlas client with the given atlas-cli path.
