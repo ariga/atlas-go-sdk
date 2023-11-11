@@ -60,6 +60,19 @@ func Test_MigrateApply(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.EqualValues(t, "20230926085734", got.Target)
+	// Add dirty changes and try again
+	os.Setenv("DB_URL", "sqlite://test.db?_fk=1&cache=shared&mode=memory")
+	drv, err := sql.Open("sqlite3", "test.db")
+	require.NoError(t, err)
+	defer os.Remove("test.db")
+	_, err = drv.ExecContext(context.Background(), "create table atlas_schema_revisions(version varchar(255) not null primary key);")
+	require.NoError(t, err)
+	got, err = c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
+		Env:        "test",
+		AllowDirty: true,
+	})
+	require.NoError(t, err)
+	require.EqualValues(t, "20230926085734", got.Target)
 }
 
 func Test_MigrateApplyWithRemote(t *testing.T) {

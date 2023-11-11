@@ -50,6 +50,7 @@ type (
 		ConfigURL       string
 		Context         *DeployRunContext
 		DirURL          string
+		AllowDirty      bool
 		URL             string
 		RevisionsSchema string
 		BaselineVersion string
@@ -244,6 +245,9 @@ func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (
 	}
 	if params.DirURL != "" {
 		args = append(args, "--dir", params.DirURL)
+	}
+	if params.AllowDirty {
+		args = append(args, "--allow-dirty")
 	}
 	if params.RevisionsSchema != "" {
 		args = append(args, "--revisions-schema", params.RevisionsSchema)
