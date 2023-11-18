@@ -56,6 +56,7 @@ type (
 		BaselineVersion string
 		TxMode          string
 		Amount          uint64
+    DryRun         bool
 		Vars            Vars
 	}
 	// MigrateStatusParams are the parameters for the `migrate status` command.
@@ -249,6 +250,9 @@ func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (
 	if params.AllowDirty {
 		args = append(args, "--allow-dirty")
 	}
+  if params.DryRun {
+    args = append(args, "--dry-run")
+  }
 	if params.RevisionsSchema != "" {
 		args = append(args, "--revisions-schema", params.RevisionsSchema)
 	}
