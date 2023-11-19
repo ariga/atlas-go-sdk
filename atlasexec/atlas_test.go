@@ -763,6 +763,8 @@ func sqlitedb(t *testing.T) string {
 func TestMigrateApply(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
+	// Mock the client with a script that just prints the arguments to stderr and
+	// exit with an error code.
 	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-args.sh"))
 	require.NoError(t, err)
 
@@ -793,7 +795,7 @@ func TestMigrateApply(t *testing.T) {
 		{
 			name: "with exec order",
 			params: &atlasexec.MigrateApplyParams{
-				ExecOrder: atlasexec.ExecutionOrderLinear,
+				ExecOrder: atlasexec.ExecOrderLinear,
 			},
 			expect: "migrate apply --format {{ json . }} --exec-order linear",
 		},
@@ -801,6 +803,9 @@ func TestMigrateApply(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := c.MigrateApply(context.Background(), tt.params)
 			require.Error(t, err)
+			// The script mock-args.sh exit with an error code.
+			// So, our atlasexec.MigrateApply should return a cliError.
+			// Which contains all output from the script (both stdout and stderr).
 			require.Equal(t, tt.expect, err.Error())
 		})
 	}

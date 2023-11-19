@@ -1,4 +1,5 @@
 #!/bin/bash
 
-echo $@
+>&2 echo $@
+
 exit 1

@@ -58,7 +58,7 @@ type (
 		RevisionsSchema string
 		BaselineVersion string
 		TxMode          string
-		ExecOrder       ExecutionOrder
+		ExecOrder       MigrateExecOrder
 		Amount          uint64
 		DryRun          bool
 		Vars            Vars
