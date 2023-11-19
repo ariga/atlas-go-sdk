@@ -41,7 +41,7 @@ type (
 	TriggerType string
 	// ExecutionOrder define how Atlas computes and executes pending migration files to the database.
 	// See: https://atlasgo.io/versioned/apply#execution-order
-	ExecutionOrder string
+	MigrateExecOrder string
 	// DeployRunContext describes what triggered this command (e.g., GitHub Action, v1.2.3)
 	DeployRunContext struct {
 		TriggerType    TriggerType `json:"triggerType,omitempty"`
@@ -139,9 +139,9 @@ const (
 
 // ExecutionOrder values.
 const (
-	ExecutionOrderLinear     ExecutionOrder = "linear" // Default
-	ExecutionOrderLinearSkip ExecutionOrder = "linear-skip"
-	ExecutionOrderNonLinear  ExecutionOrder = "non-linear"
+	ExecOrderLinear     MigrateExecOrder = "linear" // Default
+	ExecOrderLinearSkip MigrateExecOrder = "linear-skip"
+	ExecOrderNonLinear  MigrateExecOrder = "non-linear"
 )
 
 // NewClient returns a new Atlas client with the given atlas-cli path.
