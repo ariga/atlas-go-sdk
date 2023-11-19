@@ -759,3 +759,54 @@ func sqlitedb(t *testing.T) string {
 	require.NoError(t, err)
 	return dbpath
 }
+
+func TestMigrateApply(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	// Mock the client with a script that just prints the arguments to stderr and
+	// exit with an error code.
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-args.sh"))
+	require.NoError(t, err)
+
+	for _, tt := range []struct {
+		name   string
+		params *atlasexec.MigrateApplyParams
+		expect string
+	}{
+		{
+			name:   "no params",
+			params: &atlasexec.MigrateApplyParams{},
+			expect: "migrate apply --format {{ json . }}",
+		},
+		{
+			name: "with env",
+			params: &atlasexec.MigrateApplyParams{
+				Env: "test",
+			},
+			expect: "migrate apply --format {{ json . }} --env test",
+		},
+		{
+			name: "with url",
+			params: &atlasexec.MigrateApplyParams{
+				URL: "sqlite://file?_fk=1&cache=shared&mode=memory",
+			},
+			expect: "migrate apply --format {{ json . }} --url sqlite://file?_fk=1&cache=shared&mode=memory",
+		},
+		{
+			name: "with exec order",
+			params: &atlasexec.MigrateApplyParams{
+				ExecOrder: atlasexec.ExecOrderLinear,
+			},
+			expect: "migrate apply --format {{ json . }} --exec-order linear",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := c.MigrateApply(context.Background(), tt.params)
+			require.Error(t, err)
+			// The script mock-args.sh exit with an error code.
+			// So, our atlasexec.MigrateApply should return a cliError.
+			// Which contains all output from the script (both stdout and stderr).
+			require.Equal(t, tt.expect, err.Error())
+		})
+	}
+}

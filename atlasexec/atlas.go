@@ -39,6 +39,9 @@ type (
 	}
 	// TriggerType defines the type for the "trigger_type" enum field.
 	TriggerType string
+	// ExecutionOrder define how Atlas computes and executes pending migration files to the database.
+	// See: https://atlasgo.io/versioned/apply#execution-order
+	MigrateExecOrder string
 	// DeployRunContext describes what triggered this command (e.g., GitHub Action, v1.2.3)
 	DeployRunContext struct {
 		TriggerType    TriggerType `json:"triggerType,omitempty"`
@@ -55,8 +58,9 @@ type (
 		RevisionsSchema string
 		BaselineVersion string
 		TxMode          string
+		ExecOrder       MigrateExecOrder
 		Amount          uint64
-    DryRun         bool
+		DryRun          bool
 		Vars            Vars
 	}
 	// MigrateStatusParams are the parameters for the `migrate status` command.
@@ -131,6 +135,13 @@ const (
 	TriggerTypeKubernetes   TriggerType = "KUBERNETES"
 	TriggerTypeTerraform    TriggerType = "TERRAFORM"
 	TriggerTypeGithubAction TriggerType = "GITHUB_ACTION"
+)
+
+// ExecutionOrder values.
+const (
+	ExecOrderLinear     MigrateExecOrder = "linear" // Default
+	ExecOrderLinearSkip MigrateExecOrder = "linear-skip"
+	ExecOrderNonLinear  MigrateExecOrder = "non-linear"
 )
 
 // NewClient returns a new Atlas client with the given atlas-cli path.
@@ -250,9 +261,9 @@ func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (
 	if params.AllowDirty {
 		args = append(args, "--allow-dirty")
 	}
-  if params.DryRun {
-    args = append(args, "--dry-run")
-  }
+	if params.DryRun {
+		args = append(args, "--dry-run")
+	}
 	if params.RevisionsSchema != "" {
 		args = append(args, "--revisions-schema", params.RevisionsSchema)
 	}
@@ -261,6 +272,9 @@ func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (
 	}
 	if params.TxMode != "" {
 		args = append(args, "--tx-mode", params.TxMode)
+	}
+	if params.ExecOrder != "" {
+		args = append(args, "--exec-order", string(params.ExecOrder))
 	}
 	if params.Amount > 0 {
 		args = append(args, strconv.FormatUint(params.Amount, 10))
