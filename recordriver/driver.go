@@ -166,7 +166,6 @@ func (r *Response) clone() *Response {
 		copy(c.Data[i], r.Data[i])
 	}
 	return &c
-
 }
 
 // Next is called to populate the next row of data into the provided slice.
