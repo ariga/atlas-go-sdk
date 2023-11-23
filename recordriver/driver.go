@@ -143,15 +143,11 @@ func (s *stmt) Query(_ []driver.Value) (driver.Rows, error) {
 	if resp, ok := sessions[sess].responses[s.query]; ok {
 		var copiedResp Response
 		copiedResp.Cols = make([]string, len(resp.Cols))
-		for i := range resp.Cols {
-			copiedResp.Cols[i] = resp.Cols[i]
-		}
+		copy(copiedResp.Cols, resp.Cols)
 		copiedResp.Data = make([][]driver.Value, len(resp.Data))
 		for i := range resp.Data {
 			copiedResp.Data[i] = make([]driver.Value, len(resp.Data[i]))
-			for j := range resp.Data[i] {
-				copiedResp.Data[i][i] = resp.Data[i][j]
-			}
+			copy(copiedResp.Data[i], resp.Data[i])
 		}
 		return &copiedResp, nil
 	}
