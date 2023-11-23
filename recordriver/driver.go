@@ -141,7 +141,19 @@ func (s *stmt) Query(_ []driver.Value) (driver.Rows, error) {
 	sess := s.session
 	sessions[sess].Queries = append(sessions[sess].Queries, s.query)
 	if resp, ok := sessions[sess].responses[s.query]; ok {
-		return resp, nil
+		var result Response
+		result.Cols = make([]string, len(resp.Cols))
+		for i, _ := range resp.Cols {
+			result.Cols[i] = resp.Cols[i]
+		}
+		result.Data = make([][]driver.Value, len(resp.Data))
+		for i, _ := range resp.Data {
+			result.Data[i] = make([]driver.Value, len(resp.Data[i]))
+			for j, _ := range resp.Data[i] {
+				result.Data[i][i] = resp.Data[i][j]
+			}
+		}
+		return &result, nil
 	}
 	return &Response{}, nil
 }

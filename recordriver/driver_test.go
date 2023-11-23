@@ -16,18 +16,24 @@ func TestDriver(t *testing.T) {
 		Cols: []string{"sqlite_version()"},
 		Data: [][]driver.Value{{"3.30.1"}},
 	})
-	query, err := db.Query("select sqlite_version()")
-	require.NoError(t, err)
-	defer query.Close()
-	for query.Next() {
-		var version string
-		err = query.Scan(&version)
+	for i := 0; i < 3; i++ {
+		query, err := db.Query("select sqlite_version()")
 		require.NoError(t, err)
-		require.Equal(t, "3.30.1", version)
+		defer query.Close()
+		var rows []string
+		for query.Next() {
+			var version string
+			err = query.Scan(&version)
+			require.NoError(t, err)
+			rows = append(rows, version)
+			require.Equal(t, "3.30.1", version)
+		}
+		require.Len(t, rows, 1)
+		hi, ok := Session("t1")
+		require.True(t, ok)
+		require.Len(t, hi.Queries, i+1)
+
 	}
-	hi, ok := Session("t1")
-	require.True(t, ok)
-	require.Len(t, hi.Queries, 1)
 }
 
 func TestInputs(t *testing.T) {
