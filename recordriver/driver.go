@@ -141,7 +141,7 @@ func (s *stmt) Query(_ []driver.Value) (driver.Rows, error) {
 	sess := s.session
 	sessions[sess].Queries = append(sessions[sess].Queries, s.query)
 	if resp, ok := sessions[sess].responses[s.query]; ok {
-		return resp, nil
+		return resp.clone(), nil
 	}
 	return &Response{}, nil
 }
@@ -154,6 +154,13 @@ func (r *Response) Columns() []string {
 // Close closes the rows iterator. It is a noop.
 func (*Response) Close() error {
 	return nil
+}
+
+func (r *Response) clone() *Response {
+	return &Response{
+		Cols: r.Cols[:],
+		Data: r.Data[:],
+	}
 }
 
 // Next is called to populate the next row of data into the provided slice.
