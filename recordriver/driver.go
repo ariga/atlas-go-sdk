@@ -157,15 +157,10 @@ func (*Response) Close() error {
 }
 
 func (r *Response) clone() *Response {
-	var c Response
-	c.Cols = make([]string, len(r.Cols))
-	copy(c.Cols, r.Cols)
-	c.Data = make([][]driver.Value, len(r.Data))
-	for i := range r.Data {
-		c.Data[i] = make([]driver.Value, len(r.Data[i]))
-		copy(c.Data[i], r.Data[i])
+	return &Response{
+		Cols: r.Cols[:],
+		Data: r.Data[:],
 	}
-	return &c
 }
 
 // Next is called to populate the next row of data into the provided slice.
