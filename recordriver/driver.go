@@ -141,15 +141,7 @@ func (s *stmt) Query(_ []driver.Value) (driver.Rows, error) {
 	sess := s.session
 	sessions[sess].Queries = append(sessions[sess].Queries, s.query)
 	if resp, ok := sessions[sess].responses[s.query]; ok {
-		var copiedResp Response
-		copiedResp.Cols = make([]string, len(resp.Cols))
-		copy(copiedResp.Cols, resp.Cols)
-		copiedResp.Data = make([][]driver.Value, len(resp.Data))
-		for i := range resp.Data {
-			copiedResp.Data[i] = make([]driver.Value, len(resp.Data[i]))
-			copy(copiedResp.Data[i], resp.Data[i])
-		}
-		return &copiedResp, nil
+		return resp.clone(), nil
 	}
 	return &Response{}, nil
 }
@@ -162,6 +154,19 @@ func (r *Response) Columns() []string {
 // Close closes the rows iterator. It is a noop.
 func (*Response) Close() error {
 	return nil
+}
+
+func (r *Response) clone() *Response {
+	var c Response
+	c.Cols = make([]string, len(r.Cols))
+	copy(c.Cols, r.Cols)
+	c.Data = make([][]driver.Value, len(r.Data))
+	for i := range r.Data {
+		c.Data[i] = make([]driver.Value, len(r.Data[i]))
+		copy(c.Data[i], r.Data[i])
+	}
+	return &c
+
 }
 
 // Next is called to populate the next row of data into the provided slice.
