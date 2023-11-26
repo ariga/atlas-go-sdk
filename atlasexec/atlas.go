@@ -100,6 +100,7 @@ type (
 		ConfigURL string
 		DevURL    string
 		DryRun    bool
+		TxMode    string
 		Exclude   []string
 		Schema    []string
 		To        string
@@ -323,6 +324,9 @@ func (c *Client) SchemaApply(ctx context.Context, params *SchemaApplyParams) (*S
 		args = append(args, "--dry-run")
 	} else {
 		args = append(args, "--auto-approve")
+	}
+	if params.TxMode != "" {
+		args = append(args, "--tx-mode", params.TxMode)
 	}
 	if params.DevURL != "" {
 		args = append(args, "--dev-url", params.DevURL)
