@@ -161,6 +161,22 @@ func NewClient(workingDir, execPath string) (*Client, error) {
 	}, nil
 }
 
+// WithWorkDir creates a new client with the given working directory.
+// It is useful to run multiple commands in the multiple directories.
+//
+// Example:
+//
+//	client := atlasexec.NewClient("", "atlas")
+//	err := client.WithWorkDir("dir1", func(c *atlasexec.Client) error {
+//	  _, err := c.MigrateApply(ctx, &atlasexec.MigrateApplyParams{
+//	  })
+//	  return err
+//	})
+func (t Client) WithWorkDir(dir string, fn func(*Client) error) error {
+	t.workingDir = dir
+	return fn(&t)
+}
+
 // Apply runs the 'migrate apply' command.
 // Deprecated: use MigrateApply instead.
 func (c *Client) Apply(ctx context.Context, params *MigrateApplyParams) (*MigrateApply, error) {
