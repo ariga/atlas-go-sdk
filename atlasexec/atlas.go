@@ -146,9 +146,11 @@ const (
 )
 
 // NewClient returns a new Atlas client with the given atlas-cli path.
-func NewClient(workingDir, execPath string) (*Client, error) {
+func NewClient(workingDir, execPath string) (_ *Client, err error) {
 	if execPath == "" {
 		return nil, fmt.Errorf("execPath cannot be empty")
+	} else if execPath, err = exec.LookPath(execPath); err != nil {
+		return nil, fmt.Errorf("looking up atlas-cli: %w", err)
 	}
 	if workingDir != "" {
 		_, err := os.Stat(workingDir)

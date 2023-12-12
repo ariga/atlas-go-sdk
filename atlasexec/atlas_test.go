@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -22,6 +23,23 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/require"
 )
+
+func Test_NewClient(t *testing.T) {
+	execPath, err := exec.LookPath("atlas")
+	require.NoError(t, err)
+
+	// Test that we can create a client with a custom exec path.
+	_, err = atlasexec.NewClient(t.TempDir(), execPath)
+	require.NoError(t, err)
+
+	// Atlas-CLI is installed in the PATH.
+	_, err = atlasexec.NewClient(t.TempDir(), "atlas")
+	require.NoError(t, err)
+
+	// Atlas-CLI is not found for the given exec path.
+	_, err = atlasexec.NewClient(t.TempDir(), "/foo/atlas")
+	require.ErrorContains(t, err, `no such file or directory`)
+}
 
 func Test_MigrateApply(t *testing.T) {
 	ec, err := atlasexec.NewWorkingDir(
