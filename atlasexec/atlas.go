@@ -299,12 +299,7 @@ func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (
 		args = append(args, strconv.FormatUint(params.Amount, 10))
 	}
 	args = append(args, params.Vars.AsArgs()...)
-	r, err := c.runCommand(ctx, args)
-	if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.stderr == "" {
-		r = strings.NewReader(cliErr.stdout)
-		err = nil
-	}
-	return jsonDecode[MigrateApply](r, err)
+	return jsonDecodeErr[MigrateApply, *MigrateApplyError](c.runCommand(ctx, args))
 }
 
 // SchemaApply runs the 'schema apply' command.
@@ -340,7 +335,7 @@ func (c *Client) SchemaApply(ctx context.Context, params *SchemaApplyParams) (*S
 		args = append(args, "--exclude", strings.Join(params.Exclude, ","))
 	}
 	args = append(args, params.Vars.AsArgs()...)
-	return jsonDecode[SchemaApply](c.runCommand(ctx, args))
+	return jsonDecodeErr[SchemaApply, *SchemaApplyError](c.runCommand(ctx, args))
 }
 
 // SchemaInspect runs the 'schema inspect' command.
@@ -629,4 +624,19 @@ func jsonDecode[T any](r io.Reader, err error) (*T, error) {
 		}
 	}
 	return &dst, nil
+}
+
+func jsonDecodeErr[T any, Err error](r io.Reader, err error) (*T, error) {
+	if err != nil {
+		if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.stderr == "" {
+			var dst Err
+			r = strings.NewReader(cliErr.stdout)
+			if json.NewDecoder(r).Decode(&dst) == nil {
+				return nil, dst
+			}
+			// If the error is not a JSON, return the original error.
+		}
+		return nil, err
+	}
+	return jsonDecode[T](r, err)
 }
