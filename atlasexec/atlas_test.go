@@ -181,11 +181,11 @@ func TestBrokenApply(t *testing.T) {
 		URL:    "sqlite://?mode=memory",
 		DirURL: "file://testdata/broken",
 	})
-	require.NoError(t, err)
-	require.EqualValues(t,
-		`sql/migrate: execute: executing statement "broken;" from version "20231029112426": near "broken": syntax error`,
-		got.Error,
-	)
+	require.ErrorContains(t, err, `sql/migrate: execute: executing statement "broken;" from version "20231029112426": near "broken": syntax error`)
+	require.Nil(t, got)
+	report, ok := err.(*atlasexec.MigrateApplyError)
+	require.True(t, ok)
+	require.Equal(t, "20231029112426", report.Target)
 }
 
 func TestMigrateLint(t *testing.T) {

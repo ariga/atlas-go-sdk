@@ -137,6 +137,25 @@ type (
 )
 
 type (
+	// MigrateApplyError is returned when an error occurred
+	// during a migration applying attempt.
+	MigrateApplyError struct {
+		MigrateApply
+	}
+	// SchemaApplyError is returned when an error occurred
+	// during a schema applying attempt.
+	SchemaApplyError struct {
+		SchemaApply
+	}
+)
+
+// Error implements the error interface.
+func (e *MigrateApplyError) Error() string { return e.MigrateApply.Error }
+
+// Error implements the error interface.
+func (e *SchemaApplyError) Error() string { return e.SchemaApply.Error }
+
+type (
 	// Deprecated: use MigrateStatus instead
 	StatusReport = MigrateStatus
 	// Deprecated: use MigrateApply instead
