@@ -28,3 +28,30 @@ jobs:
           curl -sSf 'https://atlasgo.sh?test=1' | env ATLAS_DEBUG=true sh
       - name: Run tests
         run: go test -race ./...
+  e2e-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - run: |
+          curl -sSf 'https://atlasgo.sh?test=1' | env ATLAS_DEBUG=true sh
+      - name: Run tests
+        run: go test ./atlasexec/internal/e2e
+        env:
+          ATLASEXEC_E2ETEST: "1"
+          ATLASEXEC_E2ETEST_ATLAS_PATH: atlas
+          ATLASEXEC_E2ETEST_POSTGRES_URL: "postgres://postgres:pass@localhost:5432/postgres?search_path=public&sslmode=disable"
