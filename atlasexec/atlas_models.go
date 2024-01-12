@@ -155,13 +155,6 @@ func (e *MigrateApplyError) Error() string { return e.MigrateApply.Error }
 // Error implements the error interface.
 func (e *SchemaApplyError) Error() string { return e.SchemaApply.Error }
 
-type (
-	// Deprecated: use MigrateStatus instead
-	StatusReport = MigrateStatus
-	// Deprecated: use MigrateApply instead
-	ApplyReport = MigrateApply
-)
-
 // DiagnosticsCount returns the total number of diagnostics in the report.
 func (r *SummaryReport) DiagnosticsCount() int {
 	var n int
