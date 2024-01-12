@@ -72,3 +72,24 @@ func Test_PostgreSQL(t *testing.T) {
 		require.Equal(t, 0, len(r.Applied), "Should be no migrations applied")
 	})
 }
+
+func Test_MultiTenants(t *testing.T) {
+	t.Setenv("ATLASEXEC_E2ETEST_ATLAS_PATH", "atlas")
+	runTestWithVersions(t, []string{"latest"}, "multi-tenants", func(t *testing.T, ver *atlasexec.Version, c *atlasexec.Client) {
+		ctx := context.Background()
+		r, err := c.MultipleMigrateApply(ctx, &atlasexec.MigrateApplyParams{
+			Env: "local",
+		})
+		require.NoError(t, err)
+		require.Len(t, r, 2, "Should be two tenants")
+		require.Equal(t, 1, len(r[0].Applied), "Should be one migration applied")
+		require.Equal(t, "20240112070806", r[0].Applied[0].Version, "Should be the correct migration applied")
+
+		// Apply again, should be a no-op.
+		r, err = c.MultipleMigrateApply(ctx, &atlasexec.MigrateApplyParams{
+			Env: "local",
+		})
+		require.NoError(t, err, "Should be no error")
+		require.Equal(t, 0, len(r[0].Applied), "Should be no migrations applied")
+	})
+}

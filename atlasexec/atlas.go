@@ -227,9 +227,18 @@ func (c *Client) MigratePush(ctx context.Context, params *MigratePushParams) (st
 	return strings.TrimSpace(resp), err
 }
 
-// MigrateApply runs the 'migrate apply' command. If the underlying command returns an error, but prints to stdout
-// it will be returned as a MigrateApply with the error message in the Error field.
+// MigrateApply runs the 'migrate apply' command.
 func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (*MigrateApply, error) {
+	return firstResult(c.MultipleMigrateApply(ctx, params))
+}
+
+// SchemaApply runs the 'schema apply' command.
+func (c *Client) SchemaApply(ctx context.Context, params *SchemaApplyParams) (*SchemaApply, error) {
+	return firstResult(c.MultipleSchemaApply(ctx, params))
+}
+
+// MultipleMigrateApply runs the 'migrate apply' command for multiple targets.
+func (c *Client) MultipleMigrateApply(ctx context.Context, params *MigrateApplyParams) ([]*MigrateApply, error) {
 	args := []string{"migrate", "apply", "--format", "{{ json . }}"}
 	if params.Env != "" {
 		args = append(args, "--env", params.Env)
@@ -275,8 +284,8 @@ func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (
 	return jsonDecodeErr[MigrateApply, *MigrateApplyError](c.runCommand(ctx, args))
 }
 
-// SchemaApply runs the 'schema apply' command.
-func (c *Client) SchemaApply(ctx context.Context, params *SchemaApplyParams) (*SchemaApply, error) {
+// MultipleSchemaApply runs the 'schema apply' command for multiple targets.
+func (c *Client) MultipleSchemaApply(ctx context.Context, params *SchemaApplyParams) ([]*SchemaApply, error) {
 	args := []string{"schema", "apply", "--format", "{{ json . }}"}
 	if params.Env != "" {
 		args = append(args, "--env", params.Env)
@@ -392,7 +401,7 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 		r = strings.NewReader(cliErr.stdout)
 		err = nil
 	}
-	return jsonDecode[SummaryReport](r, err)
+	return firstResult(jsonDecode[SummaryReport](r, err))
 }
 
 // LintErr is returned when the 'migrate lint' finds a diagnostic that is configured to
@@ -452,7 +461,7 @@ func (c *Client) MigrateStatus(ctx context.Context, params *MigrateStatusParams)
 		args = append(args, "--revisions-schema", params.RevisionsSchema)
 	}
 	args = append(args, params.Vars.AsArgs()...)
-	return jsonDecode[MigrateStatus](c.runCommand(ctx, args))
+	return firstResult(jsonDecode[MigrateStatus](c.runCommand(ctx, args)))
 }
 
 var reVersion = regexp.MustCompile(`^atlas version v(\d+\.\d+.\d+)-?([a-z0-9]*)?`)
@@ -582,7 +591,18 @@ func stringVal(r io.Reader, err error) (string, error) {
 	return string(s), nil
 }
 
-func jsonDecode[T any](r io.Reader, err error) (*T, error) {
+func firstResult[T ~[]E, E any](r T, err error) (e E, _ error) {
+	switch {
+	case err != nil:
+		return e, err
+	case len(r) == 1:
+		return r[0], nil
+	default:
+		return e, errors.New("The command returned more than one result, use Multiple function instead")
+	}
+}
+
+func jsonDecode[T any](r io.Reader, err error) ([]*T, error) {
 	if err != nil {
 		return nil, err
 	}
@@ -590,16 +610,24 @@ func jsonDecode[T any](r io.Reader, err error) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
-	var dst T
-	if err = json.Unmarshal(buf, &dst); err != nil {
-		return nil, cliError{
-			stdout: string(buf),
+	var dst []*T
+	dec := json.NewDecoder(bytes.NewReader(buf))
+	for {
+		var m T
+		switch err := dec.Decode(&m); err {
+		case io.EOF:
+			return dst, nil
+		case nil:
+			dst = append(dst, &m)
+		default:
+			return nil, cliError{
+				stdout: string(buf),
+			}
 		}
 	}
-	return &dst, nil
 }
 
-func jsonDecodeErr[T any, Err error](r io.Reader, err error) (*T, error) {
+func jsonDecodeErr[T any, Err error](r io.Reader, err error) ([]*T, error) {
 	if err != nil {
 		if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.stderr == "" {
 			var dst Err
