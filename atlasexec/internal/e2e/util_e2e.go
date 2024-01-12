@@ -16,6 +16,9 @@ import (
 const testFixtureDir = "testdata"
 
 func runTestWithVersions(t *testing.T, versions []string, fixtureName string, cb func(t *testing.T, ver *atlasexec.Version, tf *atlasexec.Client)) {
+	if os.Getenv("ATLASEXEC_E2ETEST") == "" {
+		t.Skip("ATLASEXEC_E2ETEST not set")
+	}
 	t.Helper()
 	alreadyRunVersions := map[string]bool{}
 	for _, av := range versions {
