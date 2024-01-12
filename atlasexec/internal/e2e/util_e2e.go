@@ -91,8 +91,10 @@ func downloadAtlas(t *testing.T, version string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
 	if _, err = io.Copy(f, res.Body); err != nil {
+		f.Close()
+		t.Fatal(err)
+	} else if err = f.Close(); err != nil {
 		t.Fatal(err)
 	}
 	atlasBin := filepath.Join(t.TempDir(), "atlas")
