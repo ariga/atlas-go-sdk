@@ -51,3 +51,4 @@ jobs:
         run: go test ./atlasexec/internal/e2e
         env:
           ATLASEXEC_E2ETEST_ATLAS_PATH: atlas
+          ATLASEXEC_E2ETEST_POSTGRES_URL: postgres://postgres:pass@postgres:5432/postgres?search_path=public&sslmode=disable

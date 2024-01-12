@@ -2,6 +2,7 @@ package e2etest
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"ariga.io/atlas-go-sdk/atlasexec"
@@ -39,8 +40,12 @@ func Test_SQLite(t *testing.T) {
 }
 
 func Test_PostgreSQL(t *testing.T) {
+	u := os.Getenv("ATLASEXEC_E2ETEST_POSTGRES_URL")
+	if u == "" {
+		t.Skip("ATLASEXEC_E2ETEST_POSTGRES_URL not set")
+	}
 	runTestWithVersions(t, []string{"latest"}, "versioned-basic", func(t *testing.T, ver *atlasexec.Version, c *atlasexec.Client) {
-		url := "postgres://postgres:pass@localhost:5432/postgres?search_path=public&sslmode=disable"
+		url := u
 		ctx := context.Background()
 		s, err := c.Status(ctx, &atlasexec.MigrateStatusParams{
 			URL: url,
