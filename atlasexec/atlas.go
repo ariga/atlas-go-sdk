@@ -121,15 +121,6 @@ type (
 	Vars map[string]string
 )
 
-type (
-	// Deprecated: MigrateApplyParams instead.
-	ApplyParams = MigrateApplyParams
-	// Deprecated: use MigrateStatusParams instead.
-	StatusParams = MigrateStatusParams
-	// Deprecated: use MigrateLintParams instead.
-	LintParams = MigrateLintParams
-)
-
 // TriggerType values.
 const (
 	TriggerTypeCLI          TriggerType = "CLI"
@@ -178,24 +169,6 @@ func NewClient(workingDir, execPath string) (_ *Client, err error) {
 func (t Client) WithWorkDir(dir string, fn func(*Client) error) error {
 	t.workingDir = dir
 	return fn(&t)
-}
-
-// Apply runs the 'migrate apply' command.
-// Deprecated: use MigrateApply instead.
-func (c *Client) Apply(ctx context.Context, params *MigrateApplyParams) (*MigrateApply, error) {
-	return c.MigrateApply(ctx, params)
-}
-
-// Lint runs the 'migrate lint' command.
-// Deprecated: use MigrateLint instead.
-func (c *Client) Lint(ctx context.Context, params *MigrateLintParams) (*SummaryReport, error) {
-	return c.MigrateLint(ctx, params)
-}
-
-// Status runs the 'migrate status' command.
-// Deprecated: use MigrateStatus instead.
-func (c *Client) Status(ctx context.Context, params *MigrateStatusParams) (*MigrateStatus, error) {
-	return c.MigrateStatus(ctx, params)
 }
 
 // Login runs the 'login' command.

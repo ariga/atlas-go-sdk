@@ -13,7 +13,7 @@ func Test_SQLite(t *testing.T) {
 	runTestWithVersions(t, []string{"latest"}, "versioned-basic", func(t *testing.T, ver *atlasexec.Version, c *atlasexec.Client) {
 		url := "sqlite://file.db?_fk=1"
 		ctx := context.Background()
-		s, err := c.Status(ctx, &atlasexec.MigrateStatusParams{
+		s, err := c.MigrateStatus(ctx, &atlasexec.MigrateStatusParams{
 			URL: url,
 			Env: "local",
 		})
@@ -47,7 +47,7 @@ func Test_PostgreSQL(t *testing.T) {
 	runTestWithVersions(t, []string{"latest"}, "versioned-basic", func(t *testing.T, ver *atlasexec.Version, c *atlasexec.Client) {
 		url := u
 		ctx := context.Background()
-		s, err := c.Status(ctx, &atlasexec.MigrateStatusParams{
+		s, err := c.MigrateStatus(ctx, &atlasexec.MigrateStatusParams{
 			URL: url,
 			Env: "local",
 		})
