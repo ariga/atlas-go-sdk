@@ -600,7 +600,7 @@ func firstResult[T ~[]E, E any](r T, err error) (e E, _ error) {
 	case len(r) == 1:
 		return r[0], nil
 	default:
-		return e, errors.New("The command returned more than one result, use Multiple function instead")
+		return e, errors.New("The command returned more than one result, use Slice function instead")
 	}
 }
 
