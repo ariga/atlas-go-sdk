@@ -229,16 +229,11 @@ func (c *Client) MigratePush(ctx context.Context, params *MigratePushParams) (st
 
 // MigrateApply runs the 'migrate apply' command.
 func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (*MigrateApply, error) {
-	return firstResult(c.MultipleMigrateApply(ctx, params))
+	return firstResult(c.MigrateApplySlice(ctx, params))
 }
 
-// SchemaApply runs the 'schema apply' command.
-func (c *Client) SchemaApply(ctx context.Context, params *SchemaApplyParams) (*SchemaApply, error) {
-	return firstResult(c.MultipleSchemaApply(ctx, params))
-}
-
-// MultipleMigrateApply runs the 'migrate apply' command for multiple targets.
-func (c *Client) MultipleMigrateApply(ctx context.Context, params *MigrateApplyParams) ([]*MigrateApply, error) {
+// MigrateApplySlice runs the 'migrate apply' command for multiple targets.
+func (c *Client) MigrateApplySlice(ctx context.Context, params *MigrateApplyParams) ([]*MigrateApply, error) {
 	args := []string{"migrate", "apply", "--format", "{{ json . }}"}
 	if params.Env != "" {
 		args = append(args, "--env", params.Env)
@@ -284,8 +279,13 @@ func (c *Client) MultipleMigrateApply(ctx context.Context, params *MigrateApplyP
 	return jsonDecodeErr[MigrateApply](newMigrateApplyError)(c.runCommand(ctx, args))
 }
 
-// MultipleSchemaApply runs the 'schema apply' command for multiple targets.
-func (c *Client) MultipleSchemaApply(ctx context.Context, params *SchemaApplyParams) ([]*SchemaApply, error) {
+// SchemaApply runs the 'schema apply' command.
+func (c *Client) SchemaApply(ctx context.Context, params *SchemaApplyParams) (*SchemaApply, error) {
+	return firstResult(c.SchemaApplySlice(ctx, params))
+}
+
+// SchemaApplySlice runs the 'schema apply' command for multiple targets.
+func (c *Client) SchemaApplySlice(ctx context.Context, params *SchemaApplyParams) ([]*SchemaApply, error) {
 	args := []string{"schema", "apply", "--format", "{{ json . }}"}
 	if params.Env != "" {
 		args = append(args, "--env", params.Env)

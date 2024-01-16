@@ -82,7 +82,7 @@ func Test_MultiTenants(t *testing.T) {
 	t.Setenv("ATLASEXEC_E2ETEST_ATLAS_PATH", "atlas")
 	runTestWithVersions(t, []string{"latest"}, "multi-tenants", func(t *testing.T, ver *atlasexec.Version, wd *atlasexec.WorkingDir, c *atlasexec.Client) {
 		ctx := context.Background()
-		r, err := c.MultipleMigrateApply(ctx, &atlasexec.MigrateApplyParams{
+		r, err := c.MigrateApplySlice(ctx, &atlasexec.MigrateApplyParams{
 			Env:    "local",
 			Amount: 1, // Only apply one migration.
 		})
@@ -100,7 +100,7 @@ func Test_MultiTenants(t *testing.T) {
 		require.NoError(t, err)
 
 		// Apply again, should be one successful and one failed migration.
-		_, err = c.MultipleMigrateApply(ctx, &atlasexec.MigrateApplyParams{
+		_, err = c.MigrateApplySlice(ctx, &atlasexec.MigrateApplyParams{
 			Env: "local",
 		})
 		require.ErrorContains(t, err, "UNIQUE constraint failed", "Should be error")
@@ -114,7 +114,7 @@ func Test_MultiTenants(t *testing.T) {
 		require.Contains(t, mae.Result[1].Error, "UNIQUE constraint failed", "Should be the correct error")
 
 		// Apply again, should be one successful and one failed migration.
-		_, err = c.MultipleMigrateApply(ctx, &atlasexec.MigrateApplyParams{
+		_, err = c.MigrateApplySlice(ctx, &atlasexec.MigrateApplyParams{
 			Env: "local",
 		})
 		require.ErrorContains(t, err, "UNIQUE constraint failed", "Should be error")
