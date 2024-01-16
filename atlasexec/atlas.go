@@ -227,9 +227,13 @@ func (c *Client) MigratePush(ctx context.Context, params *MigratePushParams) (st
 	return strings.TrimSpace(resp), err
 }
 
-// MigrateApply runs the 'migrate apply' command. If the underlying command returns an error, but prints to stdout
-// it will be returned as a MigrateApply with the error message in the Error field.
+// MigrateApply runs the 'migrate apply' command.
 func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (*MigrateApply, error) {
+	return firstResult(c.MigrateApplySlice(ctx, params))
+}
+
+// MigrateApplySlice runs the 'migrate apply' command for multiple targets.
+func (c *Client) MigrateApplySlice(ctx context.Context, params *MigrateApplyParams) ([]*MigrateApply, error) {
 	args := []string{"migrate", "apply", "--format", "{{ json . }}"}
 	if params.Env != "" {
 		args = append(args, "--env", params.Env)
@@ -272,11 +276,16 @@ func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (
 		args = append(args, strconv.FormatUint(params.Amount, 10))
 	}
 	args = append(args, params.Vars.AsArgs()...)
-	return jsonDecodeErr[MigrateApply, *MigrateApplyError](c.runCommand(ctx, args))
+	return jsonDecodeErr[MigrateApply](newMigrateApplyError)(c.runCommand(ctx, args))
 }
 
 // SchemaApply runs the 'schema apply' command.
 func (c *Client) SchemaApply(ctx context.Context, params *SchemaApplyParams) (*SchemaApply, error) {
+	return firstResult(c.SchemaApplySlice(ctx, params))
+}
+
+// SchemaApplySlice runs the 'schema apply' command for multiple targets.
+func (c *Client) SchemaApplySlice(ctx context.Context, params *SchemaApplyParams) ([]*SchemaApply, error) {
 	args := []string{"schema", "apply", "--format", "{{ json . }}"}
 	if params.Env != "" {
 		args = append(args, "--env", params.Env)
@@ -308,7 +317,7 @@ func (c *Client) SchemaApply(ctx context.Context, params *SchemaApplyParams) (*S
 		args = append(args, "--exclude", strings.Join(params.Exclude, ","))
 	}
 	args = append(args, params.Vars.AsArgs()...)
-	return jsonDecodeErr[SchemaApply, *SchemaApplyError](c.runCommand(ctx, args))
+	return jsonDecodeErr[SchemaApply](newSchemaApplyError)(c.runCommand(ctx, args))
 }
 
 // SchemaInspect runs the 'schema inspect' command.
@@ -392,7 +401,8 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 		r = strings.NewReader(cliErr.stdout)
 		err = nil
 	}
-	return jsonDecode[SummaryReport](r, err)
+	// NOTE: This command only support one result.
+	return firstResult(jsonDecode[SummaryReport](r, err))
 }
 
 // LintErr is returned when the 'migrate lint' finds a diagnostic that is configured to
@@ -452,7 +462,8 @@ func (c *Client) MigrateStatus(ctx context.Context, params *MigrateStatusParams)
 		args = append(args, "--revisions-schema", params.RevisionsSchema)
 	}
 	args = append(args, params.Vars.AsArgs()...)
-	return jsonDecode[MigrateStatus](c.runCommand(ctx, args))
+	// NOTE: This command only support one result.
+	return firstResult(jsonDecode[MigrateStatus](c.runCommand(ctx, args)))
 }
 
 var reVersion = regexp.MustCompile(`^atlas version v(\d+\.\d+.\d+)-?([a-z0-9]*)?`)
@@ -582,7 +593,18 @@ func stringVal(r io.Reader, err error) (string, error) {
 	return string(s), nil
 }
 
-func jsonDecode[T any](r io.Reader, err error) (*T, error) {
+func firstResult[T ~[]E, E any](r T, err error) (e E, _ error) {
+	switch {
+	case err != nil:
+		return e, err
+	case len(r) == 1:
+		return r[0], nil
+	default:
+		return e, errors.New("The command returned more than one result, use Slice function instead")
+	}
+}
+
+func jsonDecode[T any](r io.Reader, err error) ([]*T, error) {
 	if err != nil {
 		return nil, err
 	}
@@ -590,26 +612,35 @@ func jsonDecode[T any](r io.Reader, err error) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
-	var dst T
-	if err = json.Unmarshal(buf, &dst); err != nil {
-		return nil, cliError{
-			stdout: string(buf),
+	var dst []*T
+	dec := json.NewDecoder(bytes.NewReader(buf))
+	for {
+		var m T
+		switch err := dec.Decode(&m); err {
+		case io.EOF:
+			return dst, nil
+		case nil:
+			dst = append(dst, &m)
+		default:
+			return nil, cliError{
+				stdout: string(buf),
+			}
 		}
 	}
-	return &dst, nil
 }
 
-func jsonDecodeErr[T any, Err error](r io.Reader, err error) (*T, error) {
-	if err != nil {
-		if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.stderr == "" {
-			var dst Err
-			r = strings.NewReader(cliErr.stdout)
-			if json.NewDecoder(r).Decode(&dst) == nil {
-				return nil, dst
+func jsonDecodeErr[T any](fn func([]*T) error) func(io.Reader, error) ([]*T, error) {
+	return func(r io.Reader, err error) ([]*T, error) {
+		if err != nil {
+			if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.stderr == "" {
+				d, err := jsonDecode[T](strings.NewReader(cliErr.stdout), nil)
+				if err == nil {
+					return nil, fn(d)
+				}
+				// If the error is not a JSON, return the original error.
 			}
-			// If the error is not a JSON, return the original error.
+			return nil, err
 		}
-		return nil, err
+		return jsonDecode[T](r, err)
 	}
-	return jsonDecode[T](r, err)
 }

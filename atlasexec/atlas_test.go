@@ -185,7 +185,7 @@ func TestBrokenApply(t *testing.T) {
 	require.Nil(t, got)
 	report, ok := err.(*atlasexec.MigrateApplyError)
 	require.True(t, ok)
-	require.Equal(t, "20231029112426", report.Target)
+	require.Equal(t, "20231029112426", report.Result[0].Target)
 }
 
 func TestMigrateLint(t *testing.T) {
