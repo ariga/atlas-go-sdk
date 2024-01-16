@@ -401,6 +401,7 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 		r = strings.NewReader(cliErr.stdout)
 		err = nil
 	}
+	// NOTE: This command only support one result.
 	return firstResult(jsonDecode[SummaryReport](r, err))
 }
 
@@ -461,6 +462,7 @@ func (c *Client) MigrateStatus(ctx context.Context, params *MigrateStatusParams)
 		args = append(args, "--revisions-schema", params.RevisionsSchema)
 	}
 	args = append(args, params.Vars.AsArgs()...)
+	// NOTE: This command only support one result.
 	return firstResult(jsonDecode[MigrateStatus](c.runCommand(ctx, args)))
 }
 
