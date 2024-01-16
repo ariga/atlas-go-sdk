@@ -140,20 +140,20 @@ type (
 	// MigrateApplyError is returned when an error occurred
 	// during a migration applying attempt.
 	MigrateApplyError struct {
-		MigrateApply
+		Result []*MigrateApply
 	}
 	// SchemaApplyError is returned when an error occurred
 	// during a schema applying attempt.
 	SchemaApplyError struct {
-		SchemaApply
+		Result []*SchemaApply
 	}
 )
 
 // Error implements the error interface.
-func (e *MigrateApplyError) Error() string { return e.MigrateApply.Error }
+func (e *MigrateApplyError) Error() string { return last(e.Result).Error }
 
 // Error implements the error interface.
-func (e *SchemaApplyError) Error() string { return e.SchemaApply.Error }
+func (e *SchemaApplyError) Error() string { return last(e.Result).Error }
 
 // DiagnosticsCount returns the total number of diagnostics in the report.
 func (r *SummaryReport) DiagnosticsCount() int {
@@ -164,4 +164,18 @@ func (r *SummaryReport) DiagnosticsCount() int {
 		}
 	}
 	return n
+}
+
+func newMigrateApplyError(r []*MigrateApply) error {
+	return &MigrateApplyError{Result: r}
+}
+func newSchemaApplyError(r []*SchemaApply) error {
+	return &SchemaApplyError{Result: r}
+}
+
+func last[A ~[]E, E any](a A) (_ E) {
+	if l := len(a); l > 0 {
+		return a[l-1]
+	}
+	return
 }

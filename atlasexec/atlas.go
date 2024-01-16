@@ -281,7 +281,7 @@ func (c *Client) MultipleMigrateApply(ctx context.Context, params *MigrateApplyP
 		args = append(args, strconv.FormatUint(params.Amount, 10))
 	}
 	args = append(args, params.Vars.AsArgs()...)
-	return jsonDecodeErr[MigrateApply, *MigrateApplyError](c.runCommand(ctx, args))
+	return jsonDecodeErr[MigrateApply](newMigrateApplyError)(c.runCommand(ctx, args))
 }
 
 // MultipleSchemaApply runs the 'schema apply' command for multiple targets.
@@ -317,7 +317,7 @@ func (c *Client) MultipleSchemaApply(ctx context.Context, params *SchemaApplyPar
 		args = append(args, "--exclude", strings.Join(params.Exclude, ","))
 	}
 	args = append(args, params.Vars.AsArgs()...)
-	return jsonDecodeErr[SchemaApply, *SchemaApplyError](c.runCommand(ctx, args))
+	return jsonDecodeErr[SchemaApply](newSchemaApplyError)(c.runCommand(ctx, args))
 }
 
 // SchemaInspect runs the 'schema inspect' command.
@@ -627,17 +627,18 @@ func jsonDecode[T any](r io.Reader, err error) ([]*T, error) {
 	}
 }
 
-func jsonDecodeErr[T any, Err error](r io.Reader, err error) ([]*T, error) {
-	if err != nil {
-		if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.stderr == "" {
-			var dst Err
-			r = strings.NewReader(cliErr.stdout)
-			if json.NewDecoder(r).Decode(&dst) == nil {
-				return nil, dst
+func jsonDecodeErr[T any](fn func([]*T) error) func(io.Reader, error) ([]*T, error) {
+	return func(r io.Reader, err error) ([]*T, error) {
+		if err != nil {
+			if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.stderr == "" {
+				d, err := jsonDecode[T](strings.NewReader(cliErr.stdout), nil)
+				if err == nil {
+					return nil, fn(d)
+				}
+				// If the error is not a JSON, return the original error.
 			}
-			// If the error is not a JSON, return the original error.
+			return nil, err
 		}
-		return nil, err
+		return jsonDecode[T](r, err)
 	}
-	return jsonDecode[T](r, err)
 }

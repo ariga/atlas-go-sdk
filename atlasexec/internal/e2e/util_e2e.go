@@ -15,7 +15,7 @@ import (
 
 const testFixtureDir = "testdata"
 
-func runTestWithVersions(t *testing.T, versions []string, fixtureName string, cb func(t *testing.T, ver *atlasexec.Version, tf *atlasexec.Client)) {
+func runTestWithVersions(t *testing.T, versions []string, fixtureName string, cb func(t *testing.T, ver *atlasexec.Version, wd *atlasexec.WorkingDir, tf *atlasexec.Client)) {
 	if os.Getenv("ATLASEXEC_E2ETEST") == "" {
 		t.Skip("ATLASEXEC_E2ETEST not set")
 	}
@@ -63,7 +63,7 @@ func runTestWithVersions(t *testing.T, versions []string, fixtureName string, cb
 						}
 					}
 				}()
-				cb(t, runningVersion, c)
+				cb(t, runningVersion, wd, c)
 				return nil
 			})
 			if err != nil {
