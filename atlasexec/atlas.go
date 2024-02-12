@@ -118,6 +118,18 @@ type (
 		URL       string
 		Vars      Vars
 	}
+	// SchemaDiffParams are the parameters for the `schema diff` command.
+	SchemaDiffParams struct {
+		Env     string
+		DevURL  string
+		Exclude []string
+		Format  string
+		Schema  []string
+		Vars    Vars
+		Web     bool
+		From    []string
+		To      []string
+	}
 	Vars map[string]string
 )
 
@@ -343,6 +355,37 @@ func (c *Client) SchemaInspect(ctx context.Context, params *SchemaInspectParams)
 	}
 	if len(params.Exclude) > 0 {
 		args = append(args, "--exclude", strings.Join(params.Exclude, ","))
+	}
+	args = append(args, params.Vars.AsArgs()...)
+	return stringVal(c.runCommand(ctx, args))
+}
+
+// SchemaDiff runs the 'schema diff' command.
+func (c *Client) SchemaDiff(ctx context.Context, params *SchemaDiffParams) (string, error) {
+	args := []string{"schema", "diff"}
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
+	}
+	if params.DevURL != "" {
+		args = append(args, "--dev-url", params.DevURL)
+	}
+	if params.Format == "sql" {
+		args = append(args, "--format", "{{ sql . }}")
+	}
+	if len(params.Schema) > 0 {
+		args = append(args, "--schema", strings.Join(params.Schema, ","))
+	}
+	if len(params.Exclude) > 0 {
+		args = append(args, "--exclude", strings.Join(params.Exclude, ","))
+	}
+	if len(params.From) > 0 {
+		args = append(args, "--from", strings.Join(params.From, ","))
+	}
+	if len(params.To) > 0 {
+		args = append(args, "--to", strings.Join(params.To, ","))
+	}
+	if params.Web {
+		args = append(args, "--web")
 	}
 	args = append(args, params.Vars.AsArgs()...)
 	return stringVal(c.runCommand(ctx, args))
