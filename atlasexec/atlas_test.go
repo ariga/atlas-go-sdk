@@ -240,6 +240,9 @@ func TestMigrateLint(t *testing.T) {
 					Pos:  0,
 					Text: `Dropping table "t2"`,
 					Code: "DS102",
+					SuggestedFixes: []sqlcheck.SuggestedFix{{
+						Message: "Add a pre-migration check to ensure table \"t2\" is empty before dropping it",
+					}},
 				}},
 			}},
 			Error: "destructive changes detected",
