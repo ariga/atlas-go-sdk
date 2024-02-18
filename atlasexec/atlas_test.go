@@ -242,11 +242,11 @@ func TestMigrateLint(t *testing.T) {
 					Code: "DS102",
 					SuggestedFixes: []sqlcheck.SuggestedFix{{
 						Message: "Add a pre-migration check to ensure table \"t2\" is empty before dropping it",
-						TextEdits: []sqlcheck.TextEdit{{
+						TextEdit: &sqlcheck.TextEdit{
 							Line: 1,
 							End:  1,
 							NewText: "-- atlas:txtar\n\n-- checks/destructive.sql --\n-- atlas:assert DS102\nSELECT NOT EXISTS (SELECT 1 FROM `t2`) AS `is_empty`;\n\n-- migration.sql --\nDROP TABLE t2;",
-						}},
+						},
 					}},
 				}},
 			}},
