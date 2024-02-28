@@ -74,11 +74,14 @@ type (
 	}
 	// RunContext describes what triggered this command (e.g., GitHub Action).
 	RunContext struct {
-		Repo   string `json:"repo,omitempty"`
-		Path   string `json:"path,omitempty"`
-		Branch string `json:"branch,omitempty"`
-		Commit string `json:"commit,omitempty"`
-		URL    string `json:"url,omitempty"`
+		Repo     string `json:"repo,omitempty"`
+		Path     string `json:"path,omitempty"`
+		Branch   string `json:"branch,omitempty"`
+		Commit   string `json:"commit,omitempty"`
+		URL      string `json:"url,omitempty"`
+		Username string `json:"username,omitempty"` // The username that triggered the event that initiated the command.
+		UserID   string `json:"userID,omitempty"`   // The user ID that triggered the event that initiated the command.
+		SCMType  string `json:"scmType,omitempty"`  // Source control management system type.
 	}
 	// MigrateLintParams are the parameters for the `migrate lint` command.
 	MigrateLintParams struct {
