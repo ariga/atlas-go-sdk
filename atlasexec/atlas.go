@@ -79,7 +79,7 @@ type (
 		Branch   string `json:"branch,omitempty"`
 		Commit   string `json:"commit,omitempty"`
 		URL      string `json:"url,omitempty"`
-		UserName string `json:"username,omitempty"` // The username that triggered the event that initiated the command.
+		Username string `json:"username,omitempty"` // The username that triggered the event that initiated the command.
 		UserID   string `json:"userID,omitempty"`   // The user ID that triggered the event that initiated the command.
 		SCMType  string `json:"scmType,omitempty"`  // Source control management system type.
 	}

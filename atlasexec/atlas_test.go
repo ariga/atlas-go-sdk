@@ -430,7 +430,7 @@ func TestMigrateLintWithLogin(t *testing.T) {
 				Branch:   "testing-branch",
 				Commit:   "sha123",
 				URL:      "this://is/a/url",
-				UserName: "test-user",
+				Username: "test-user",
 				UserID:   "test-user-id",
 				SCMType:  "GIHUB",
 			}
@@ -522,7 +522,7 @@ func TestMigratePush(t *testing.T) {
 		Commit:   "sha123",
 		URL:      "this://is/a/url",
 		UserID:   "test-user-id",
-		UserName: "test-user",
+		Username: "test-user",
 		SCMType:  "GIHUB",
 	}
 	t.Run("sync", func(t *testing.T) {
