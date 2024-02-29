@@ -240,6 +240,14 @@ func TestMigrateLint(t *testing.T) {
 					Pos:  0,
 					Text: `Dropping table "t2"`,
 					Code: "DS102",
+					SuggestedFixes: []sqlcheck.SuggestedFix{{
+						Message: "Add a pre-migration check to ensure table \"t2\" is empty before dropping it",
+						TextEdit: &sqlcheck.TextEdit{
+							Line:    1,
+							End:     1,
+							NewText: "-- atlas:txtar\n\n-- checks/destructive.sql --\n-- atlas:assert DS102\nSELECT NOT EXISTS (SELECT 1 FROM `t2`) AS `is_empty`;\n\n-- migration.sql --\nDROP TABLE t2;",
+						},
+					}},
 				}},
 			}},
 			Error: "destructive changes detected",
@@ -411,24 +419,30 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		var payloads []graphQLQuery
 		srv := httptest.NewServer(handler(&payloads))
 		t.Cleanup(srv.Close)
-		atlasConfigURL := generateHCL(t, token, srv)
 		c, err := atlasexec.NewClient(".", "atlas")
 		require.NoError(t, err)
-		var buf bytes.Buffer
+		var (
+			buf            bytes.Buffer
+			atlasConfigURL = generateHCL(t, token, srv)
+			runContext     = &atlasexec.RunContext{
+				Repo:     "testing-repo",
+				Path:     "path/to/dir",
+				Branch:   "testing-branch",
+				Commit:   "sha123",
+				URL:      "this://is/a/url",
+				Username: "test-user",
+				UserID:   "test-user-id",
+				SCMType:  "GIHUB",
+			}
+		)
 		err = c.MigrateLintError(context.Background(), &atlasexec.MigrateLintParams{
 			DevURL:    "sqlite://file?mode=memory",
 			DirURL:    "file://testdata/migrations",
 			ConfigURL: atlasConfigURL,
 			Base:      "atlas://test-dir-slug",
-			Context: &atlasexec.RunContext{
-				Repo:   "testing-repo",
-				Path:   "path/to/dir",
-				Branch: "testing-branch",
-				Commit: "sha123",
-				URL:    "this://is/a/url",
-			},
-			Writer: &buf,
-			Web:    true,
+			Context:   runContext,
+			Writer:    &buf,
+			Web:       true,
 		})
 		require.Equal(t, atlasexec.LintErr, err)
 		var sr atlasexec.SummaryReport
@@ -441,11 +455,7 @@ func TestMigrateLintWithLogin(t *testing.T) {
 			}
 			found = true
 			require.NoError(t, json.Unmarshal(query.Variables, &query.MigrateLintReport))
-			require.Equal(t, "testing-branch", query.MigrateLintReport.Context.Branch)
-			require.Equal(t, "sha123", query.MigrateLintReport.Context.Commit)
-			require.Equal(t, "path/to/dir", query.MigrateLintReport.Context.Path)
-			require.Equal(t, "testing-repo", query.MigrateLintReport.Context.Repo)
-			require.Equal(t, "this://is/a/url", query.MigrateLintReport.Context.URL)
+			require.Equal(t, runContext, query.MigrateLintReport.Context)
 		}
 		require.True(t, found)
 	})
@@ -506,11 +516,14 @@ func TestMigratePush(t *testing.T) {
 	c, err := atlasexec.NewClient(".", "atlas")
 	require.NoError(t, err)
 	inputContext := &atlasexec.RunContext{
-		Repo:   "testing-repo",
-		Path:   "path/to/dir",
-		Branch: "testing-branch",
-		Commit: "sha123",
-		URL:    "this://is/a/url",
+		Repo:     "testing-repo",
+		Path:     "path/to/dir",
+		Branch:   "testing-branch",
+		Commit:   "sha123",
+		URL:      "this://is/a/url",
+		UserID:   "test-user-id",
+		Username: "test-user",
+		SCMType:  "GIHUB",
 	}
 	t.Run("sync", func(t *testing.T) {
 		params := &atlasexec.MigratePushParams{
