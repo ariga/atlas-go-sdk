@@ -121,6 +121,14 @@ type (
 		URL       string
 		Vars      Vars
 	}
+	// MigrateHashParams are the parameters for the `migrate hash` command.
+	MigrateHashParams struct {
+		Env       string
+		ConfigURL string
+		DirURL       string
+		DirFormat string
+		Vars      Vars
+	}
 	Vars map[string]string
 )
 
@@ -228,6 +236,26 @@ func (c *Client) MigratePush(ctx context.Context, params *MigratePushParams) (st
 	}
 	resp, err := stringVal(c.runCommand(ctx, args))
 	return strings.TrimSpace(resp), err
+}
+
+// MigrateHash runs the 'migrate hash' command.
+func (c *Client) MigrateHash(ctx context.Context, params *MigrateHashParams) error {
+	args := []string{"migrate", "hash"}
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
+	}
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
+	}
+	if params.DirURL != "" {
+		args = append(args, "--dir", params.DirURL)
+	}
+	if params.DirFormat != "" {
+		args = append(args, "--dir-format", params.DirFormat)
+	}
+	args = append(args, params.Vars.AsArgs()...)
+	_, err := c.runCommand(ctx, args)
+	return err
 }
 
 // MigrateApply runs the 'migrate apply' command.
