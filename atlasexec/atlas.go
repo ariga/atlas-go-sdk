@@ -39,7 +39,7 @@ type (
 	}
 	// TriggerType defines the type for the "trigger_type" enum field.
 	TriggerType string
-	// ExecutionOrder define how Atlas computes and executes pending migration files to the database.
+	// MigrateExecOrder define how Atlas computes and executes pending migration files to the database.
 	// See: https://atlasgo.io/versioned/apply#execution-order
 	MigrateExecOrder string
 	// DeployRunContext describes what triggered this command (e.g., GitHub Action, v1.2.3)
@@ -62,6 +62,21 @@ type (
 		Amount          uint64
 		DryRun          bool
 		Vars            Vars
+	}
+	// MigrateDownParams are the parameters for the `migrate down` command.
+	MigrateDownParams struct {
+		Env             string
+		ConfigURL       string
+		Context         *DeployRunContext
+		DirURL          string
+		URL             string
+		RevisionsSchema string
+		ToVersion       string
+		Vars            Vars
+
+		// Not yet supported
+		// DryRun          bool
+		// TxMode          string
 	}
 	// MigrateStatusParams are the parameters for the `migrate status` command.
 	MigrateStatusParams struct {
@@ -169,9 +184,9 @@ func NewClient(workingDir, execPath string) (_ *Client, err error) {
 //	  })
 //	  return err
 //	})
-func (t Client) WithWorkDir(dir string, fn func(*Client) error) error {
-	t.workingDir = dir
-	return fn(&t)
+func (c *Client) WithWorkDir(dir string, fn func(*Client) error) error {
+	c.workingDir = dir
+	return fn(c)
 }
 
 // Login runs the 'login' command.
@@ -280,6 +295,44 @@ func (c *Client) MigrateApplySlice(ctx context.Context, params *MigrateApplyPara
 	}
 	args = append(args, params.Vars.AsArgs()...)
 	return jsonDecodeErr[MigrateApply](newMigrateApplyError)(c.runCommand(ctx, args))
+}
+
+// MigrateDown runs the 'migrate down' command.
+func (c *Client) MigrateDown(ctx context.Context, params *MigrateDownParams) (*MigrateDown, error) {
+	args := []string{"migrate", "down", "--format", "{{ json . }}"}
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
+	}
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
+	}
+	if params.Context != nil {
+		buf, err := json.Marshal(params.Context)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, "--context", string(buf))
+	}
+	if params.URL != "" {
+		args = append(args, "--url", params.URL)
+	}
+	if params.DirURL != "" {
+		args = append(args, "--dir", params.DirURL)
+	}
+	if params.RevisionsSchema != "" {
+		args = append(args, "--revisions-schema", params.RevisionsSchema)
+	}
+	if params.ToVersion != "" {
+		args = append(args, "--to-version", params.ToVersion)
+	}
+	args = append(args, params.Vars.AsArgs()...)
+	r, err := c.runCommand(ctx, args)
+	if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.stderr == "" {
+		r = strings.NewReader(cliErr.stdout)
+		err = nil
+	}
+	// NOTE: This command only support one result.
+	return firstResult(jsonDecode[MigrateDown](r, err))
 }
 
 // SchemaApply runs the 'schema apply' command.
