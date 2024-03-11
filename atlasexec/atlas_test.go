@@ -841,3 +841,54 @@ func TestMigrateApply(t *testing.T) {
 		})
 	}
 }
+
+func TestMigrateDown(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	// Mock the client with a script that just prints the arguments to stderr and
+	// exit with an error code.
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-args.sh"))
+	require.NoError(t, err)
+
+	for _, tt := range []struct {
+		name   string
+		params *atlasexec.MigrateDownParams
+		expect string
+	}{
+		{
+			name:   "no params",
+			params: &atlasexec.MigrateDownParams{},
+			expect: "migrate down --format {{ json . }}",
+		},
+		{
+			name: "with env",
+			params: &atlasexec.MigrateDownParams{
+				Env: "test",
+			},
+			expect: "migrate down --format {{ json . }} --env test",
+		},
+		{
+			name: "with url",
+			params: &atlasexec.MigrateDownParams{
+				URL: "sqlite://file?_fk=1&cache=shared&mode=memory",
+			},
+			expect: "migrate down --format {{ json . }} --url sqlite://file?_fk=1&cache=shared&mode=memory",
+		},
+		{
+			name: "with target version",
+			params: &atlasexec.MigrateDownParams{
+				ToVersion: "12345",
+			},
+			expect: "migrate down --format {{ json . }} --to-version 12345",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := c.MigrateDown(context.Background(), tt.params)
+			require.Error(t, err)
+			// The script mock-args.sh exit with an error code.
+			// So, our atlasexec.MigrateApply should return a cliError.
+			// Which contains all output from the script (both stdout and stderr).
+			require.Equal(t, tt.expect, err.Error())
+		})
+	}
+}

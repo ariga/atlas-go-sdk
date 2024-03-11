@@ -38,6 +38,18 @@ type (
 		// but by Atlas, e.g. when committing or rolling back a transaction.
 		Error string `json:"Error,omitempty"`
 	}
+	// MigrateDown contains a summary of a migration down attempt on a database.
+	MigrateDown struct {
+		Planned []File         `json:"Planned,omitempty"` // Pending migration files
+		Applied []*AppliedFile `json:"Applied,omitempty"` // Applied files
+		Current string         `json:"Current,omitempty"` // Current migration version
+		Target  string         `json:"Target,omitempty"`  // Target migration version
+		Start   time.Time
+		End     time.Time
+		// Error is set even then, if it was not caused by a statement in a migration file,
+		// but by Atlas, e.g. when committing or rolling back a transaction.
+		Error string `json:"Error,omitempty"`
+	}
 	// MigrateStatus contains a summary of the migration status of a database.
 	MigrateStatus struct {
 		Available []File      `json:"Available,omitempty"` // Available migration files
@@ -169,6 +181,7 @@ func (r *SummaryReport) DiagnosticsCount() int {
 func newMigrateApplyError(r []*MigrateApply) error {
 	return &MigrateApplyError{Result: r}
 }
+
 func newSchemaApplyError(r []*SchemaApply) error {
 	return &SchemaApplyError{Result: r}
 }
