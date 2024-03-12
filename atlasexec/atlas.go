@@ -71,7 +71,9 @@ type (
 		DirURL          string
 		URL             string
 		RevisionsSchema string
+		Amount          uint64
 		ToVersion       string
+		ToTag           string
 		Vars            Vars
 
 		// Not yet supported
@@ -324,6 +326,12 @@ func (c *Client) MigrateDown(ctx context.Context, params *MigrateDownParams) (*M
 	}
 	if params.ToVersion != "" {
 		args = append(args, "--to-version", params.ToVersion)
+	}
+	if params.ToTag != "" {
+		args = append(args, "--to-tag", params.ToTag)
+	}
+	if params.Amount > 0 {
+		args = append(args, strconv.FormatUint(params.Amount, 10))
 	}
 	args = append(args, params.Vars.AsArgs()...)
 	r, err := c.runCommand(ctx, args)

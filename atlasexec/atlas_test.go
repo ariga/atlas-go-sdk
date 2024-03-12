@@ -881,6 +881,20 @@ func TestMigrateDown(t *testing.T) {
 			},
 			expect: "migrate down --format {{ json . }} --to-version 12345",
 		},
+		{
+			name: "with tag version",
+			params: &atlasexec.MigrateDownParams{
+				ToTag: "12345",
+			},
+			expect: "migrate down --format {{ json . }} --to-tag 12345",
+		},
+		{
+			name: "with amount",
+			params: &atlasexec.MigrateDownParams{
+				Amount: 10,
+			},
+			expect: "migrate down --format {{ json . }} 10",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := c.MigrateDown(context.Background(), tt.params)
