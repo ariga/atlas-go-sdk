@@ -895,6 +895,13 @@ func TestMigrateDown(t *testing.T) {
 			},
 			expect: "migrate down --format {{ json . }} 10",
 		},
+		{
+			name: "dev-url",
+			params: &atlasexec.MigrateDownParams{
+				DevURL: "url",
+			},
+			expect: "migrate down --format {{ json . }} --dev-url url",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := c.MigrateDown(context.Background(), tt.params)

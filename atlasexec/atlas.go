@@ -67,6 +67,7 @@ type (
 	MigrateDownParams struct {
 		Env             string
 		ConfigURL       string
+		DevURL          string
 		Context         *DeployRunContext
 		DirURL          string
 		URL             string
@@ -307,6 +308,9 @@ func (c *Client) MigrateDown(ctx context.Context, params *MigrateDownParams) (*M
 	}
 	if params.ConfigURL != "" {
 		args = append(args, "--config", params.ConfigURL)
+	}
+	if params.DevURL != "" {
+		args = append(args, "--dev-url", params.DevURL)
 	}
 	if params.Context != nil {
 		buf, err := json.Marshal(params.Context)
