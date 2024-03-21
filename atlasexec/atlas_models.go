@@ -14,13 +14,26 @@ type (
 		Version     string `json:"Version,omitempty"`
 		Description string `json:"Description,omitempty"`
 	}
-	// AppliedFile is part of an ApplyReport containing information about an applied file in a migration attempt.
+	// AppliedFile is part of a MigrateApply containing information about an applied file in a migration attempt.
 	AppliedFile struct {
 		File
 		Start   time.Time
 		End     time.Time
 		Skipped int      // Amount of skipped SQL statements in a partially applied file.
 		Applied []string // SQL statements applied with success
+		Error   *struct {
+			SQL   string // SQL statement that failed.
+			Error string // Error returned by the database.
+		}
+	}
+	// RevertedFile is part of a MigrateDown containing information about a reverted file in a downgrade attempt.
+	RevertedFile struct {
+		File
+		Start   time.Time
+		End     time.Time
+		Skipped int      // Amount of skipped SQL statements in a partially applied file.
+		Applied []string // SQL statements applied with success
+		Scope   string   // Scope of the revert. e.g., statement, versions, etc.
 		Error   *struct {
 			SQL   string // SQL statement that failed.
 			Error string // Error returned by the database.
@@ -40,12 +53,16 @@ type (
 	}
 	// MigrateDown contains a summary of a migration down attempt on a database.
 	MigrateDown struct {
-		Planned []File         `json:"Planned,omitempty"` // Pending migration files
-		Applied []*AppliedFile `json:"Applied,omitempty"` // Applied files
-		Current string         `json:"Current,omitempty"` // Current migration version
-		Target  string         `json:"Target,omitempty"`  // Target migration version
-		Start   time.Time
-		End     time.Time
+		Planned  []File          `json:"Planned,omitempty"`  // Pending migration files
+		Reverted []*RevertedFile `json:"Reverted,omitempty"` // Applied files
+		Current  string          `json:"Current,omitempty"`  // Current migration version
+		Target   string          `json:"Target,omitempty"`   // Target migration version
+		Total    int             `json:"Total,omitempty"`    // Total number of migrations to revert
+		Start    time.Time
+		End      time.Time
+		// URL and Status are set only when the migration is planned or executed in the cloud.
+		URL    string `json:"URL,omitempty"`
+		Status string `json:"Status,omitempty"`
 		// Error is set even then, if it was not caused by a statement in a migration file,
 		// but by Atlas, e.g. when committing or rolling back a transaction.
 		Error string `json:"Error,omitempty"`
