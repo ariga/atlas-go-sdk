@@ -585,6 +585,35 @@ func TestMigratePush(t *testing.T) {
 	})
 }
 
+func TestMigrateHash(t *testing.T) {
+	ce, err := atlasexec.NewWorkingDir(
+		atlasexec.WithMigrations(os.DirFS(filepath.Join("testdata", "migrations"))),
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, ce.Close())
+	})
+	c, err := atlasexec.NewClient(ce.Path(), "atlas")
+	require.NoError(t, err)
+	_, err = ce.WriteFile("migrations/new.sql", []byte(`
+    	-- create table "users"
+		CREATE TABLE users(id int NOT NULL);
+`))
+	require.NoError(t, err)
+	err = c.MigrateHash(context.Background(), &atlasexec.MigrateHashParams{
+		DirURL: "file://migrations",
+	})
+	require.NoError(t, err)
+	sum, err := os.ReadFile(ce.Path("migrations/atlas.sum"))
+	require.NoError(t, err)
+	require.Equal(t, `h1:kox3n1k+sm1yUsqcdJLcmU5rL8es0m+70rQJAjzsPZ4=
+20230727105553_init.sql h1:jxgvnWO6tZD3lSPpH1ao5E/6VjapP7iwvBCUJ6aez58=
+20230727105615_t2.sql h1:UvzeoFxe90Y/7b21ziwg6pPzWJQSV7LeYwJl8J63lMU=
+20230926085734_destructive-change.sql h1:Gf/bSvUkfqHr/MEXKCxdGu2YvG8zwe4ER5TW8T/laA0=
+new.sql h1:D0A4nIljowwFpTvvTJ2kdJcuozZHJo+mKsHZ7vZd0e8=
+`, string(sum))
+}
+
 func generateHCL(t *testing.T, token string, srv *httptest.Server) string {
 	st := fmt.Sprintf(
 		`atlas { 
