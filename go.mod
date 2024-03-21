@@ -1,11 +1,11 @@
 module ariga.io/atlas-go-sdk
 
-go 1.21
+go 1.22
 
-toolchain go1.21.2
+toolchain go1.22.0
 
 require (
-	ariga.io/atlas v0.19.1-0.20240218093714-1a4929bdea1f
+	ariga.io/atlas v0.20.1-0.20240321075817-75fd3b1accbf
 	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/stretchr/testify v1.8.4
 )
@@ -23,7 +23,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/zclconf/go-cty v1.14.1 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
