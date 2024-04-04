@@ -460,6 +460,57 @@ func TestMigrateLintWithLogin(t *testing.T) {
 		require.True(t, found)
 	})
 }
+func TestMigrateDiff(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	// Mock the client with a script that just prints the arguments to stderr and
+	// exit with an error code.
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-args.sh"))
+	require.NoError(t, err)
+
+	for _, tt := range []struct {
+		name   string
+		params *atlasexec.MigrateDiffParams
+		expect string
+	}{
+		{
+			name:   "no params",
+			params: &atlasexec.MigrateDiffParams{},
+			expect: "migrate diff --format {{ sql }}",
+		},
+		{
+			name: "with env",
+			params: &atlasexec.MigrateDiffParams{
+				Env: "test",
+			},
+			expect: "migrate diff --format {{ sql }} --env test",
+		},
+		{
+			name: "with url",
+			params: &atlasexec.MigrateDiffParams{
+				DevURL: "sqlite://file?_fk=1&cache=shared&mode=memory",
+			},
+			expect: "migrate diff --format {{ sql }} --dev-url sqlite://file?_fk=1&cache=shared&mode=memory",
+		},
+		{
+			name: "with exec order",
+			params: &atlasexec.MigrateDiffParams{
+				Env: "gorm",
+			},
+			expect: "migrate diff --format {{ sql }} --env gorm",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := c.MigrateDiff(context.Background(), tt.params)
+			require.Error(t, err)
+			// The script mock-args.sh exit with an error code.
+			// So, our atlasexec.MigrateApply should return a cliError.
+			// Which contains all output from the script (both stdout and stderr).
+			require.Equal(t, tt.expect, err.Error())
+		})
+	}
+}
+
 
 func TestMigratePush(t *testing.T) {
 	type (

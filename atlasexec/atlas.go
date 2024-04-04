@@ -24,6 +24,21 @@ type (
 	LoginParams struct {
 		Token string
 	}
+	// MigrateDiffParams are the parameters for the `migrate diff` command.
+	MigrateDiffParams struct {
+		ToURL          string
+		DevURL         string
+		DirURL         string
+		DirFormat      string
+		Schema         string
+		LockTimeout    string
+		Format         string
+		Qualifier      string
+		Context        *RunContext
+		ConfigURL      string
+		Env            string
+		Vars           Vars
+	}
 	// MigratePushParams are the parameters for the `migrate push` command.
 	MigratePushParams struct {
 		Name        string
@@ -244,6 +259,48 @@ func (c *Client) MigratePush(ctx context.Context, params *MigratePushParams) (st
 	} else {
 		args = append(args, params.Name)
 	}
+	resp, err := stringVal(c.runCommand(ctx, args))
+	return strings.TrimSpace(resp), err
+}
+
+// MigrateDiff runs the 'migrate diff' command.
+func (c *Client) MigrateDiff(ctx context.Context, params *MigrateDiffParams) (string, error) {
+	args := []string{"migrate", "diff", "--format", "{{ sql }}"}
+	if params.ToURL != "" {
+		args = append(args, "--to", params.ToURL)
+	}
+	if params.DevURL != "" {
+		args = append(args, "--dev-url", params.DevURL)
+	}
+	if params.DirURL != "" {
+		args = append(args, "--dir", params.DirURL)
+	}
+	if params.DirFormat != "" {
+		args = append(args, "--dir-format", params.DirFormat)
+	}
+	if params.Schema != "" {
+		args = append(args, "--schema", params.Schema)
+	}
+	if params.LockTimeout != "" {
+		args = append(args, "--lock-timeout", params.LockTimeout)
+	}
+	if params.Qualifier != "" {
+		args = append(args, "--qualifier", params.Qualifier)
+	}
+	if params.Context != nil {
+		buf, err := json.Marshal(params.Context)
+		if err != nil {
+			return "", err
+		}
+		args = append(args, "--context", string(buf))
+	}
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
+	}
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
+	}
+	args = append(args, params.Vars.AsArgs()...)
 	resp, err := stringVal(c.runCommand(ctx, args))
 	return strings.TrimSpace(resp), err
 }
