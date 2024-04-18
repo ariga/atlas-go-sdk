@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"ariga.io/atlas/sql/migrate"
 )
 
 type (
@@ -137,26 +139,54 @@ func (ce *WorkingDir) CreateFile(name string, fn func(w io.Writer) error) error 
 // in the temporary directory.
 // If source is nil, an error is returned.
 func (cs *WorkingDir) CopyFS(name string, src fs.FS) error {
-	if src == nil {
-		return errors.New("atlasexec: source is nil")
-	}
 	dst := cs.Path(name)
 	// Ensure destination directory exists.
 	if err := os.MkdirAll(dst, 0700); err != nil {
 		return err
 	}
-	return fs.WalkDir(src, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || path == "." {
-			return err
-		}
-		name := filepath.Join(dst, path)
-		if d.IsDir() {
-			return os.Mkdir(name, 0700)
-		}
-		data, err := fs.ReadFile(src, path)
+	switch dir := src.(type) {
+	case nil:
+		return errors.New("atlasexec: source is nil")
+	case migrate.Dir:
+		// The migrate.MemDir doesn't 100% compatible with fs.FS.
+		// It returns fs.ErrNotExist error when open "." directory.
+		// So, we need to handle it separately using the Files method.
+		files, err := dir.Files()
 		if err != nil {
 			return err
 		}
-		return os.WriteFile(name, data, 0644)
-	})
+		for _, f := range files {
+			name := filepath.Join(dst, f.Name())
+			if err := os.WriteFile(name, f.Bytes(), 0644); err != nil {
+				return err
+			}
+		}
+		// If the atlas.sum file exists, copy it to the destination directory.
+		if hf, err := dir.Open(migrate.HashFileName); err == nil {
+			data, err := io.ReadAll(hf)
+			if err != nil {
+				return err
+			}
+			name := filepath.Join(dst, migrate.HashFileName)
+			if err := os.WriteFile(name, data, 0644); err != nil {
+				return err
+			}
+		}
+		return nil
+	default:
+		return fs.WalkDir(dir, ".", func(path string, d fs.DirEntry, err error) error {
+			if err != nil || path == "." {
+				return err
+			}
+			name := filepath.Join(dst, path)
+			if d.IsDir() {
+				return os.Mkdir(name, 0700)
+			}
+			data, err := fs.ReadFile(dir, path)
+			if err != nil {
+				return err
+			}
+			return os.WriteFile(name, data, 0644)
+		})
+	}
 }
