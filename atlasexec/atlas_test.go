@@ -474,11 +474,13 @@ func TestMigratePush(t *testing.T) {
 					Dir    string `json:"dir"`
 				} `json:"input"`
 			}
-			SyncDir *struct {
+			DiffSyncDir *struct {
 				Input struct {
 					Slug    string                `json:"slug"`
 					Driver  string                `json:"driver"`
 					Dir     string                `json:"dir"`
+					Add     string                `json:"add"`
+					Delete  []string              `json:"delete"`
 					Context *atlasexec.RunContext `json:"context"`
 				} `json:"input"`
 			}
@@ -501,10 +503,10 @@ func TestMigratePush(t *testing.T) {
 					require.NoError(t, err)
 					fmt.Fprint(w, `{"data":{"pushDir":{"url":"https://some-org.atlasgo.cloud/dirs/314159/tags/12345"}}}`)
 				}
-				if strings.Contains(query.Query, "syncDir") {
-					err := json.Unmarshal(query.Variables, &query.SyncDir)
+				if strings.Contains(query.Query, "diffSyncDir") {
+					err := json.Unmarshal(query.Variables, &query.DiffSyncDir)
 					require.NoError(t, err)
-					fmt.Fprint(w, `{"data":{"syncDir":{"url":"https://some-org.atlasgo.cloud/dirs/314159/tags/12345"}}}`)
+					fmt.Fprint(w, `{"data":{"diffSyncDir":{"url":"https://some-org.atlasgo.cloud/dirs/314159/tags/12345"}}}`)
 				}
 				tt.payloads = append(tt.payloads, query)
 			}
@@ -537,13 +539,13 @@ func TestMigratePush(t *testing.T) {
 			params.ConfigURL = atlasConfigURL
 			got, err := c.MigratePush(context.Background(), params)
 			require.NoError(t, err)
-			require.Len(t, tt.payloads, 2)
+			require.Len(t, tt.payloads, 3)
 			require.Equal(t, `https://some-org.atlasgo.cloud/dirs/314159/tags/12345`, got)
-			p := &tt.payloads[1]
-			require.Contains(t, p.Query, "syncDir")
-			require.Equal(t, "test-dir-slug", p.SyncDir.Input.Slug)
-			require.Equal(t, "SQLITE", p.SyncDir.Input.Driver)
-			require.NotEmpty(t, p.SyncDir.Input.Dir)
+			p := &tt.payloads[2]
+			require.Contains(t, p.Query, "diffSyncDir")
+			require.Equal(t, "test-dir-slug", p.DiffSyncDir.Input.Slug)
+			require.Equal(t, "SQLITE", p.DiffSyncDir.Input.Driver)
+			require.NotEmpty(t, p.DiffSyncDir.Input.Dir)
 		})
 		t.Run("without context", func(t *testing.T) {
 			tt, atlasConfigURL := newHTTPTest()
@@ -552,12 +554,12 @@ func TestMigratePush(t *testing.T) {
 			got, err := c.MigratePush(context.Background(), params)
 			require.NoError(t, err)
 			require.Equal(t, `https://some-org.atlasgo.cloud/dirs/314159/tags/12345`, got)
-			require.Len(t, tt.payloads, 2)
-			p := &tt.payloads[1]
-			require.Contains(t, p.Query, "syncDir")
-			err = json.Unmarshal(p.Variables, &p.SyncDir)
+			require.Len(t, tt.payloads, 3)
+			p := &tt.payloads[2]
+			require.Contains(t, p.Query, "diffSyncDir")
+			err = json.Unmarshal(p.Variables, &p.DiffSyncDir)
 			require.NoError(t, err)
-			require.Equal(t, inputContext, p.SyncDir.Input.Context)
+			require.Equal(t, inputContext, p.DiffSyncDir.Input.Context)
 		})
 
 	})
