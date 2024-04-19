@@ -5,7 +5,7 @@ go 1.22
 toolchain go1.22.0
 
 require (
-	ariga.io/atlas v0.20.1-0.20240321075817-75fd3b1accbf
+	ariga.io/atlas v0.21.2-0.20240418081819-02b3f6239b04
 	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/stretchr/testify v1.8.4
 )

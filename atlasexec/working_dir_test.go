@@ -10,6 +10,7 @@ import (
 	"testing/fstest"
 	"text/template"
 
+	"ariga.io/atlas/sql/migrate"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,6 +36,16 @@ func TestContextExecer(t *testing.T) {
 	ce, err = NewWorkingDir(WithMigrations(src))
 	require.NoError(t, err)
 	checkFileContent(t, filepath.Join("migrations", "bar"), "bar-content")
+	require.NoError(t, ce.Close())
+
+	// Test WithMigrations - MemDir.
+	dir := &migrate.MemDir{}
+	require.NoError(t, dir.WriteFile("1.sql", []byte("-- only .sql files are copied\nmem-content")))
+	require.NoError(t, dir.WriteFile(migrate.HashFileName, []byte("-- And the atlas.sum")))
+	ce, err = NewWorkingDir(WithMigrations(dir))
+	require.NoError(t, err)
+	checkFileContent(t, filepath.Join("migrations", "1.sql"), "-- only .sql files are copied\nmem-content")
+	checkFileContent(t, filepath.Join("migrations", migrate.HashFileName), "-- And the atlas.sum")
 	require.NoError(t, ce.Close())
 
 	// Test WithAtlasHCL.
