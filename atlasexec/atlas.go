@@ -534,7 +534,7 @@ func (c *Client) MigrateStatus(ctx context.Context, params *MigrateStatusParams)
 	return firstResult(jsonDecode[MigrateStatus](c.runCommand(ctx, args)))
 }
 
-var reVersion = regexp.MustCompile(`^atlas version v(\d+\.\d+.\d+)-?([a-z0-9]*)?`)
+var reVersion = regexp.MustCompile(`^atlas( community)? version v(\d+\.\d+.\d+)-?([a-z0-9]*)?`)
 
 // Version runs the 'version' command.
 func (c *Client) Version(ctx context.Context) (*Version, error) {
@@ -551,11 +551,11 @@ func (c *Client) Version(ctx context.Context) (*Version, error) {
 		return nil, errors.New("unexpected output format")
 	}
 	var sha string
-	if len(v) > 2 {
-		sha = string(v[2])
+	if len(v) > 3 {
+		sha = string(v[3])
 	}
 	return &Version{
-		Version: string(v[1]),
+		Version: string(v[2]),
 		SHA:     sha,
 		Canary:  strings.Contains(string(out), "canary"),
 	}, nil
