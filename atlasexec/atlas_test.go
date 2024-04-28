@@ -561,7 +561,6 @@ func TestMigratePush(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, inputContext, p.DiffSyncDir.Input.Context)
 		})
-
 	})
 	t.Run("push", func(t *testing.T) {
 		tt, atlasConfigURL := newHTTPTest()
@@ -753,8 +752,9 @@ func TestVersion(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, tt := range []struct {
-		env    string
-		expect *atlasexec.Version
+		env       string
+		community bool
+		expect    *atlasexec.Version
 	}{
 		{
 			env:    "",
@@ -775,8 +775,19 @@ func TestVersion(t *testing.T) {
 				SHA:     "sha",
 			},
 		},
+		{
+			env:       "v0.21.1",
+			community: true,
+			expect: &atlasexec.Version{
+				Version:   "0.21.1",
+				Community: true,
+			},
+		},
 	} {
 		t.Run(tt.env, func(t *testing.T) {
+			if tt.community {
+				t.Setenv("TEST_ATLAS_COMMUNITY_EDITION", "1")
+			}
 			t.Setenv("TEST_ATLAS_VERSION", tt.env)
 			v, err := c.Version(context.Background())
 			require.NoError(t, err)

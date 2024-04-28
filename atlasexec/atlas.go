@@ -555,9 +555,10 @@ func (c *Client) Version(ctx context.Context) (*Version, error) {
 		sha = string(v[3])
 	}
 	return &Version{
-		Version: string(v[2]),
-		SHA:     sha,
-		Canary:  strings.Contains(string(out), "canary"),
+		Version:   string(v[2]),
+		SHA:       sha,
+		Canary:    strings.Contains(string(out), "canary"),
+		Community: strings.Contains(string(out), "community"),
 	}, nil
 }
 
