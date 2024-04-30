@@ -339,8 +339,8 @@ func (c *Client) MigrateDown(ctx context.Context, params *MigrateDownParams) (*M
 	}
 	args = append(args, params.Vars.AsArgs()...)
 	r, err := c.runCommand(ctx, args)
-	if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.stderr == "" {
-		r = strings.NewReader(cliErr.stdout)
+	if cliErr := (&Error{}); errors.As(err, &cliErr) && cliErr.Stderr == "" {
+		r = strings.NewReader(cliErr.Stdout)
 		err = nil
 	}
 	// NOTE: This command only support one result.
@@ -465,8 +465,8 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 		return nil, err
 	}
 	r, err := c.runCommand(ctx, args)
-	if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.stderr == "" {
-		r = strings.NewReader(cliErr.stdout)
+	if cliErr := (&Error{}); errors.As(err, &cliErr) && cliErr.Stderr == "" {
+		r = strings.NewReader(cliErr.Stdout)
 		err = nil
 	}
 	// NOTE: This command only support one result.
@@ -478,7 +478,7 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 var LintErr = errors.New("lint error")
 
 // MigrateLintError runs the 'migrate lint' command, the output is written to params.Writer and reports
-// if an error occurred. If the error is a setup error, a cliError is returned. If the error is a lint error,
+// if an error occurred. If the error is a setup error, a Error is returned. If the error is a lint error,
 // LintErr is returned.
 func (c *Client) MigrateLintError(ctx context.Context, params *MigrateLintParams) error {
 	args, err := lintArgs(params)
@@ -487,17 +487,17 @@ func (c *Client) MigrateLintError(ctx context.Context, params *MigrateLintParams
 	}
 	r, err := c.runCommand(ctx, args)
 	var (
-		cliErr cliError
+		cliErr *Error
 		isCLI  = errors.As(err, &cliErr)
 	)
 	// Setup errors.
-	if isCLI && cliErr.stderr != "" {
+	if isCLI && cliErr.Stderr != "" {
 		return cliErr
 	}
 	// Lint errors.
-	if isCLI && cliErr.stdout != "" {
+	if isCLI && cliErr.Stdout != "" {
 		err = LintErr
-		r = strings.NewReader(cliErr.stdout)
+		r = strings.NewReader(cliErr.Stdout)
 	}
 	// Unknown errors.
 	if err != nil && !isCLI {
@@ -572,10 +572,14 @@ func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, erro
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
-		return nil, cliError{
-			stderr: strings.TrimSpace(stderr.String()),
-			stdout: strings.TrimSpace(stdout.String()),
+		cerr := &Error{
+			Stderr: strings.TrimSpace(stderr.String()),
+			Stdout: strings.TrimSpace(stdout.String()),
 		}
+		if exitErr := (&exec.ExitError{}); errors.As(err, &exitErr) {
+			cerr.err = exitErr
+		}
+		return nil, cerr
 	}
 	return &stdout, nil
 }
@@ -629,17 +633,22 @@ func TempFile(content, ext string) (string, func() error, error) {
 	}, nil
 }
 
-type cliError struct {
-	stdout string
-	stderr string
+type Error struct {
+	err    *exec.ExitError
+	Stdout string
+	Stderr string
 }
 
 // Error implements the error interface.
-func (e cliError) Error() string {
-	if e.stderr != "" {
-		return e.stderr
+func (e *Error) Error() string {
+	if e.Stderr != "" {
+		return e.Stderr
 	}
-	return e.stdout
+	return e.Stdout
+}
+
+func (e *Error) Unwrap() error {
+	return e.err
 }
 
 func (v Vars) AsArgs() []string {
@@ -690,8 +699,8 @@ func jsonDecode[T any](r io.Reader, err error) ([]*T, error) {
 		case nil:
 			dst = append(dst, &m)
 		default:
-			return nil, cliError{
-				stdout: string(buf),
+			return nil, &Error{
+				Stdout: string(buf),
 			}
 		}
 	}
@@ -700,8 +709,8 @@ func jsonDecode[T any](r io.Reader, err error) ([]*T, error) {
 func jsonDecodeErr[T any](fn func([]*T) error) func(io.Reader, error) ([]*T, error) {
 	return func(r io.Reader, err error) ([]*T, error) {
 		if err != nil {
-			if cliErr := (cliError{}); errors.As(err, &cliErr) && cliErr.stderr == "" {
-				d, err := jsonDecode[T](strings.NewReader(cliErr.stdout), nil)
+			if cliErr := (&Error{}); errors.As(err, &cliErr) && cliErr.Stderr == "" {
+				d, err := jsonDecode[T](strings.NewReader(cliErr.Stdout), nil)
 				if err == nil {
 					return nil, fn(d)
 				}
