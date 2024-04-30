@@ -71,6 +71,8 @@ func Test_MigrateApply(t *testing.T) {
 	})
 	require.ErrorContains(t, err, `required flag "url" not set`)
 	require.Nil(t, got)
+	var exerr *exec.ExitError
+	require.ErrorAs(t, err, &exerr)
 	// Set the env var and try again
 	os.Setenv("DB_URL", "sqlite://file?_fk=1&cache=shared&mode=memory")
 	got, err = c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
@@ -837,7 +839,7 @@ func TestMigrateApply(t *testing.T) {
 			_, err := c.MigrateApply(context.Background(), tt.params)
 			require.Error(t, err)
 			// The script mock-args.sh exit with an error code.
-			// So, our atlasexec.MigrateApply should return a cliError.
+			// So, our atlasexec.MigrateApply should return a Error.
 			// Which contains all output from the script (both stdout and stderr).
 			require.Equal(t, tt.expect, err.Error())
 		})
@@ -909,7 +911,7 @@ func TestMigrateDown(t *testing.T) {
 			_, err := c.MigrateDown(context.Background(), tt.params)
 			require.Error(t, err)
 			// The script mock-args.sh exit with an error code.
-			// So, our atlasexec.MigrateApply should return a cliError.
+			// So, our atlasexec.MigrateApply should return a Error.
 			// Which contains all output from the script (both stdout and stderr).
 			require.Equal(t, tt.expect, err.Error())
 		})

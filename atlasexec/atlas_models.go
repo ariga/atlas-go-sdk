@@ -53,8 +53,8 @@ type (
 	}
 	// MigrateDown contains a summary of a migration down attempt on a database.
 	MigrateDown struct {
-		Planned  []File          `json:"Planned,omitempty"`  // Pending migration files
-		Reverted []*RevertedFile `json:"Reverted,omitempty"` // Applied files
+		Planned  []File          `json:"Planned,omitempty"`  // Planned migration files
+		Reverted []*RevertedFile `json:"Reverted,omitempty"` // Reverted files
 		Current  string          `json:"Current,omitempty"`  // Current migration version
 		Target   string          `json:"Target,omitempty"`   // Target migration version
 		Total    int             `json:"Total,omitempty"`    // Total number of migrations to revert
