@@ -403,8 +403,11 @@ func (c *Client) SchemaInspect(ctx context.Context, params *SchemaInspectParams)
 	if params.DevURL != "" {
 		args = append(args, "--dev-url", params.DevURL)
 	}
-	if params.Format == "sql" {
+	switch {
+	case params.Format == "sql": 
 		args = append(args, "--format", "{{ sql . }}")
+	case params.Format != "":
+		args = append(args, "--format", params.Format)
 	}
 	if len(params.Schema) > 0 {
 		args = append(args, "--schema", strings.Join(params.Schema, ","))
