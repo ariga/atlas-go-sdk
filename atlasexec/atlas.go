@@ -404,7 +404,7 @@ func (c *Client) SchemaInspect(ctx context.Context, params *SchemaInspectParams)
 		args = append(args, "--dev-url", params.DevURL)
 	}
 	switch {
-	case params.Format == "sql": 
+	case params.Format == "sql":
 		args = append(args, "--format", "{{ sql . }}")
 	case params.Format != "":
 		args = append(args, "--format", params.Format)
@@ -648,6 +648,14 @@ func (e *Error) Error() string {
 		return e.Stderr
 	}
 	return e.Stdout
+}
+
+// ExitCode returns the exit code of the command.
+func (e *Error) ExitCode() int {
+	if e.err == nil {
+		return new(exec.ExitError).ExitCode()
+	}
+	return e.err.ExitCode()
 }
 
 func (e *Error) Unwrap() error {
