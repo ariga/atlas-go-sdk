@@ -24,6 +24,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestError(t *testing.T) {
+	err := atlasexec.Error{}
+	require.NotPanics(t, func() {
+		err.ExitCode()
+	})
+}
+
 func Test_NewClient(t *testing.T) {
 	execPath, err := exec.LookPath("atlas")
 	require.NoError(t, err)
