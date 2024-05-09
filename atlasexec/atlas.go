@@ -148,6 +148,7 @@ const (
 	TriggerTypeKubernetes   TriggerType = "KUBERNETES"
 	TriggerTypeTerraform    TriggerType = "TERRAFORM"
 	TriggerTypeGithubAction TriggerType = "GITHUB_ACTION"
+	TriggerTypeCircleCIOrb  TriggerType = "CIRCLECI_ORB"
 )
 
 // ExecutionOrder values.
