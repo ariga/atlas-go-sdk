@@ -129,6 +129,7 @@ const (
 	TriggerTypeKubernetes   TriggerType = "KUBERNETES"
 	TriggerTypeTerraform    TriggerType = "TERRAFORM"
 	TriggerTypeGithubAction TriggerType = "GITHUB_ACTION"
+	TriggerTypeCircleCIOrb  TriggerType = "CIRCLECI_ORB"
 )
 
 // NewClient returns a new Atlas client with the given atlas-cli path.
