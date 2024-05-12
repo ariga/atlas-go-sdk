@@ -58,7 +58,7 @@ func (r *Runner) gorun(src []byte) (string, error) {
 func gorun(target string) (string, error) {
 	s, err := gocmd("run", target)
 	if err != nil {
-		return "", fmt.Errorf("gormschema: %s", err)
+		return "", fmt.Errorf("tmplrun: %s", err)
 	}
 	return s, nil
 }
