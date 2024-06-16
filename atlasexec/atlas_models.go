@@ -41,6 +41,7 @@ type (
 	}
 	// MigrateApply contains a summary of a migration applying attempt on a database.
 	MigrateApply struct {
+		Env
 		Pending []File         `json:"Pending,omitempty"` // Pending migration files
 		Applied []*AppliedFile `json:"Applied,omitempty"` // Applied files
 		Current string         `json:"Current,omitempty"` // Current migration version
