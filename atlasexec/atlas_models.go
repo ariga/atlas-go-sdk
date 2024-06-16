@@ -258,9 +258,9 @@ func (a *MigrateApply) Summary(ident string) string {
 	}
 	var b strings.Builder
 	for i, l := range lines {
-		b.WriteString("--")
+		b.WriteString("-")
 		b.WriteByte(' ')
-		b.WriteString(l)
+		b.WriteString(fmt.Sprintf("**%s**", l))
 		if i < len(lines)-1 {
 			b.WriteByte('\n')
 			b.WriteString(ident)
