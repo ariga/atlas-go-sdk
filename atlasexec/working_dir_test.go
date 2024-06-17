@@ -79,3 +79,15 @@ func TestContextExecer(t *testing.T) {
 	require.Equal(t, "atlas.hcl\nmigrations\n", buf.String())
 	require.NoError(t, ce.Close())
 }
+
+func TestMaintainOriginalWorkingDir(t *testing.T) {
+	dir := t.TempDir()
+	c, err := NewClient(dir, "atlas")
+	require.NoError(t, err)
+	require.Equal(t, dir, c.workingDir)
+	require.NoError(t, c.WithWorkDir("bar", func(c *Client) error {
+		require.Equal(t, "bar", c.workingDir)
+		return nil
+	}))
+	require.Equal(t, dir, c.workingDir, "The working directory should not be changed")
+}
