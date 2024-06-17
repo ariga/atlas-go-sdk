@@ -188,9 +188,12 @@ func NewClient(workingDir, execPath string) (_ *Client, err error) {
 //	  })
 //	  return err
 //	})
-func (c Client) WithWorkDir(dir string, fn func(*Client) error) error {
+func (c *Client) WithWorkDir(dir string, fn func(*Client) error) error {
+	wd := c.workingDir
+	defer func() { c.workingDir = wd }()
 	c.workingDir = dir
-	return fn(&c)
+	err := fn(c)
+	return err
 }
 
 // Login runs the 'login' command.
