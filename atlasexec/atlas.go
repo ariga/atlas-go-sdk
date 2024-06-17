@@ -192,8 +192,7 @@ func (c *Client) WithWorkDir(dir string, fn func(*Client) error) error {
 	wd := c.workingDir
 	defer func() { c.workingDir = wd }()
 	c.workingDir = dir
-	err := fn(c)
-	return err
+	return fn(c)
 }
 
 // Login runs the 'login' command.
