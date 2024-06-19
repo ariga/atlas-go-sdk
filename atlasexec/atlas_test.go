@@ -86,7 +86,10 @@ func Test_MigrateApply(t *testing.T) {
 		Env: "test",
 	})
 	require.NoError(t, err)
-	require.EqualValues(t, "20230926085734", got.Target)
+	require.Equal(t, "sqlite3", got.Env.Driver)
+	require.Equal(t, "migrations", got.Env.Dir)
+	require.Equal(t, "sqlite://file?_fk=1&cache=shared&mode=memory", got.Env.URL.String())
+	require.Equal(t, "20230926085734", got.Target)
 	// Add dirty changes and try again
 	os.Setenv("DB_URL", "sqlite://test.db?_fk=1&cache=shared&mode=memory")
 	drv, err := sql.Open("sqlite3", "test.db")
