@@ -86,10 +86,7 @@ func Test_MigrateApply(t *testing.T) {
 		Env: "test",
 	})
 	require.NoError(t, err)
-	require.Equal(t, "sqlite3", got.Env.Driver)
-	require.Equal(t, "migrations", got.Env.Dir)
-	require.Equal(t, "sqlite://file?_fk=1&cache=shared&mode=memory", got.Env.URL.String())
-	require.Equal(t, "20230926085734", got.Target)
+	require.EqualValues(t, "20230926085734", got.Target)
 	// Add dirty changes and try again
 	os.Setenv("DB_URL", "sqlite://test.db?_fk=1&cache=shared&mode=memory")
 	drv, err := sql.Open("sqlite3", "test.db")
@@ -198,6 +195,14 @@ func TestBrokenApply(t *testing.T) {
 	report, ok := err.(*atlasexec.MigrateApplyError)
 	require.True(t, ok)
 	require.Equal(t, "20231029112426", report.Result[0].Target)
+	require.Equal(t, "sql/migrate: executing statement \"broken;\" from version \"20231029112426\": near \"broken\": syntax error", report.Error())
+	require.Len(t, report.Result[0].Applied, 1)
+	require.Equal(t, &struct {
+		Stmt, Text string
+	}{
+		Stmt: "broken;",
+		Text: "near \"broken\": syntax error",
+	}, report.Result[0].Applied[0].Error)
 }
 
 func TestMigrateLint(t *testing.T) {

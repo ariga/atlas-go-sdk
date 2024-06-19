@@ -22,8 +22,8 @@ type (
 		Skipped int      // Amount of skipped SQL statements in a partially applied file.
 		Applied []string // SQL statements applied with success
 		Error   *struct {
-			SQL   string // SQL statement that failed.
-			Error string // Error returned by the database.
+			Stmt string // SQL statement that failed.
+			Text string //	 Error returned by the database.
 		}
 	}
 	// RevertedFile is part of a MigrateDown containing information about a reverted file in a downgrade attempt.
@@ -35,8 +35,8 @@ type (
 		Applied []string // SQL statements applied with success
 		Scope   string   // Scope of the revert. e.g., statement, versions, etc.
 		Error   *struct {
-			SQL   string // SQL statement that failed.
-			Error string // Error returned by the database.
+			Stmt string // SQL statement that failed.
+			Text string //	 Error returned by the database.
 		}
 	}
 	// MigrateApply contains a summary of a migration applying attempt on a database.
