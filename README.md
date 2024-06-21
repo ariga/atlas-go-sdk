@@ -46,6 +46,7 @@ The SDK provides the following APIs:
 - `SchemaApply`: runs the "atlas schema apply" command.
 - `SchemaInspect`: runs the "atlas schema inspect" command.
 - `SchemaDiff`: runs the "atlas schema diff" command.
+- `SchemaTest`: runs the "atlas schema test" command.
 
 Example with `MigrateApply` API:
 

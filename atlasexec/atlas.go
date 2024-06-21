@@ -150,6 +150,15 @@ type (
 		URL       string
 		Vars      Vars
 	}
+	// SchemaTestParams are the parameters for the `schema test` command.
+	SchemaTestParams struct {
+		Env       string
+		ConfigURL string
+		URL       string
+		DevURL    string
+		Run       string
+		Vars      Vars
+	}
 	Vars map[string]string
 )
 
@@ -456,6 +465,28 @@ func (c *Client) SchemaInspect(ctx context.Context, params *SchemaInspectParams)
 	}
 	if len(params.Exclude) > 0 {
 		args = append(args, "--exclude", strings.Join(params.Exclude, ","))
+	}
+	args = append(args, params.Vars.AsArgs()...)
+	return stringVal(c.runCommand(ctx, args))
+}
+
+// SchemaTest runs the 'schema test' command.
+func (c *Client) SchemaTest(ctx context.Context, params *SchemaTestParams) (string, error) {
+	args := []string{"schema", "test"}
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
+	}
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
+	}
+	if params.URL != "" {
+		args = append(args, "--url", params.URL)
+	}
+	if params.DevURL != "" {
+		args = append(args, "--dev-url", params.DevURL)
+	}
+	if params.Run != "" {
+		args = append(args, "--run", params.Run)
 	}
 	args = append(args, params.Vars.AsArgs()...)
 	return stringVal(c.runCommand(ctx, args))

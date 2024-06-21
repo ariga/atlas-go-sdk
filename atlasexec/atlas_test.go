@@ -1000,3 +1000,61 @@ func TestMigrateTest(t *testing.T) {
 		})
 	}
 }
+
+func TestSchemaTest(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	// Mock the client with a script that just prints the arguments to stderr and
+	// exit with an error code.
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-args.sh"))
+	require.NoError(t, err)
+
+	for _, tt := range []struct {
+		name   string
+		params *atlasexec.SchemaTestParams
+		expect string
+	}{
+		{
+			name:   "no params",
+			params: &atlasexec.SchemaTestParams{},
+			expect: "schema test",
+		},
+		{
+			name: "with env",
+			params: &atlasexec.SchemaTestParams{
+				Env: "test",
+			},
+			expect: "schema test --env test",
+		},
+		{
+			name: "with config",
+			params: &atlasexec.SchemaTestParams{
+				ConfigURL: "file://config.hcl",
+			},
+			expect: "schema test --config file://config.hcl",
+		},
+		{
+			name: "with dev-url",
+			params: &atlasexec.SchemaTestParams{
+				DevURL: "sqlite://file?_fk=1&cache=shared&mode=memory",
+			},
+			expect: "schema test --dev-url sqlite://file?_fk=1&cache=shared&mode=memory",
+		},
+		{
+			name: "with run",
+			params: &atlasexec.SchemaTestParams{
+				Run: "example",
+			},
+			expect: "schema test --run example",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := c.SchemaTest(context.Background(), tt.params)
+			require.Error(t, err)
+			// The script mock-args.sh exit with an error code.
+			// So, our atlasexec.SchemaTest should return a Error.
+			// Which contains all output from the script (both stdout and stderr).
+			require.Equal(t, tt.expect, err.Error())
+		})
+	}
+}
