@@ -115,6 +115,17 @@ type (
 		Base      string
 		Format    string
 	}
+	// MigrateTestParams are the parameters for the `migrate test` command.
+	MigrateTestParams struct {
+		Env             string
+		ConfigURL       string
+		DirURL          string
+		DevURL          string
+		DirFormat       string
+		Run             string
+		RevisionsSchema string
+		Vars            Vars
+	}
 	// SchemaApplyParams are the parameters for the `schema apply` command.
 	SchemaApplyParams struct {
 		Env       string
@@ -348,6 +359,34 @@ func (c *Client) MigrateDown(ctx context.Context, params *MigrateDownParams) (*M
 	}
 	// NOTE: This command only support one result.
 	return firstResult(jsonDecode[MigrateDown](r, err))
+}
+
+// MigrateTest runs the 'migrate test' command.
+func (c *Client) MigrateTest(ctx context.Context, params *MigrateTestParams) (string, error) {
+	args := []string{"migrate", "test"}
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
+	}
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
+	}
+	if params.DirURL != "" {
+		args = append(args, "--dir", params.DirURL)
+	}
+	if params.DirFormat != "" {
+		args = append(args, "--dir-format", params.DirFormat)
+	}
+	if params.DevURL != "" {
+		args = append(args, "--dev-url", params.DevURL)
+	}
+	if params.RevisionsSchema != "" {
+		args = append(args, "--revisions-schema", params.RevisionsSchema)
+	}
+	if params.Run != "" {
+		args = append(args, "--run", params.Run)
+	}
+	args = append(args, params.Vars.AsArgs()...)
+	return stringVal(c.runCommand(ctx, args))
 }
 
 // SchemaApply runs the 'schema apply' command.

@@ -42,6 +42,7 @@ The SDK provides the following APIs:
 - `MigrateApplySlice`: runs the 'atlas migrate apply' command for multiple targets.
 - `MigrateDown`: runs the "atlas migrate down" command.
 - `MigrateStatus`: runs the "atlas migrate status" command.
+- `MigrateTest`: runs the "atlas migrate test" command.
 - `SchemaApply`: runs the "atlas schema apply" command.
 - `SchemaInspect`: runs the "atlas schema inspect" command.
 - `SchemaDiff`: runs the "atlas schema diff" command.
