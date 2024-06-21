@@ -989,6 +989,15 @@ func TestMigrateTest(t *testing.T) {
 			},
 			expect: "migrate test --revisions-schema schema",
 		},
+		{
+			name: "with run context",
+			params: &atlasexec.MigrateTestParams{
+				Context: &atlasexec.RunContext{
+					Repo: "testing-repo",
+				},
+			},
+			expect: "migrate test --context {\"repo\":\"testing-repo\"}",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := c.MigrateTest(context.Background(), tt.params)

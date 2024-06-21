@@ -120,6 +120,7 @@ type (
 		Env             string
 		ConfigURL       string
 		DirURL          string
+		Context         *RunContext
 		DevURL          string
 		DirFormat       string
 		Run             string
@@ -387,6 +388,13 @@ func (c *Client) MigrateTest(ctx context.Context, params *MigrateTestParams) (st
 	}
 	if params.DevURL != "" {
 		args = append(args, "--dev-url", params.DevURL)
+	}
+	if params.Context != nil {
+		buf, err := json.Marshal(params.Context)
+		if err != nil {
+			return "", err
+		}
+		args = append(args, "--context", string(buf))
 	}
 	if params.RevisionsSchema != "" {
 		args = append(args, "--revisions-schema", params.RevisionsSchema)
