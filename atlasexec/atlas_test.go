@@ -87,7 +87,7 @@ func Test_MigrateApply(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, "sqlite3", got.Env.Driver)
-	require.Equal(t, "migrations", got.Env.Dir)
+	require.Equal(t, "file://migrations", got.Env.Dir)
 	require.Equal(t, "sqlite://file?_fk=1&cache=shared&mode=memory", got.Env.URL.String())
 	require.Equal(t, "20230926085734", got.Target)
 	// Add dirty changes and try again
@@ -930,6 +930,71 @@ func TestMigrateDown(t *testing.T) {
 			require.Error(t, err)
 			// The script mock-args.sh exit with an error code.
 			// So, our atlasexec.MigrateApply should return a Error.
+			// Which contains all output from the script (both stdout and stderr).
+			require.Equal(t, tt.expect, err.Error())
+		})
+	}
+}
+
+func TestMigrateTest(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	// Mock the client with a script that just prints the arguments to stderr and
+	// exit with an error code.
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-args.sh"))
+	require.NoError(t, err)
+
+	for _, tt := range []struct {
+		name   string
+		params *atlasexec.MigrateTestParams
+		expect string
+	}{
+		{
+			name:   "no params",
+			params: &atlasexec.MigrateTestParams{},
+			expect: "migrate test",
+		},
+		{
+			name: "with env",
+			params: &atlasexec.MigrateTestParams{
+				Env: "test",
+			},
+			expect: "migrate test --env test",
+		},
+		{
+			name: "with config",
+			params: &atlasexec.MigrateTestParams{
+				ConfigURL: "file://config.hcl",
+			},
+			expect: "migrate test --config file://config.hcl",
+		},
+		{
+			name: "with dev-url",
+			params: &atlasexec.MigrateTestParams{
+				DevURL: "sqlite://file?_fk=1&cache=shared&mode=memory",
+			},
+			expect: "migrate test --dev-url sqlite://file?_fk=1&cache=shared&mode=memory",
+		},
+		{
+			name: "with run",
+			params: &atlasexec.MigrateTestParams{
+				Run: "example",
+			},
+			expect: "migrate test --run example",
+		},
+		{
+			name: "with revisions-schema",
+			params: &atlasexec.MigrateTestParams{
+				RevisionsSchema: "schema",
+			},
+			expect: "migrate test --revisions-schema schema",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := c.MigrateTest(context.Background(), tt.params)
+			require.Error(t, err)
+			// The script mock-args.sh exit with an error code.
+			// So, our atlasexec.MigrateTest should return a Error.
 			// Which contains all output from the script (both stdout and stderr).
 			require.Equal(t, tt.expect, err.Error())
 		})
