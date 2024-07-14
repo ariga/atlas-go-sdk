@@ -652,7 +652,10 @@ func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, erro
 	cmd.Dir = c.workingDir
 	// Set ATLAS_NO_UPDATE_NOTIFIER=1 to disable the update notifier.
 	// use os.Environ() to avoid overriding the user's environment.
-	cmd.Env = append(os.Environ(), "ATLAS_NO_UPDATE_NOTIFIER=1")
+	cmd.Env = append(os.Environ(),
+		"ATLAS_NO_UPDATE_NOTIFIER=1",
+		"ATLAS_SKIP_UPGRADE_SUGGESTIONS=1",
+	)
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
