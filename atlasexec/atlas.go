@@ -7,9 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/exec"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -19,6 +21,7 @@ type (
 	Client struct {
 		execPath   string
 		workingDir string
+		env        Environ
 	}
 	// LoginParams are the parameters for the `login` command.
 	LoginParams struct {
@@ -161,6 +164,8 @@ type (
 		Vars      Vars
 	}
 	Vars map[string]string
+	// Environ is a map of environment variables.
+	Environ map[string]string
 )
 
 // TriggerType values.
@@ -214,6 +219,18 @@ func (c *Client) WithWorkDir(dir string, fn func(*Client) error) error {
 	defer func() { c.workingDir = wd }()
 	c.workingDir = dir
 	return fn(c)
+}
+
+// SetEnv allows we override the environment variables for the atlas-cli.
+// To append new environment variables to environment from OS, use NewOSEnviron() then add new variables.
+func (c *Client) SetEnv(env map[string]string) error {
+	for k := range env {
+		if _, ok := defaultEnvs[k]; ok {
+			return fmt.Errorf("atlasexec: cannot override the default environment variable %q", k)
+		}
+	}
+	c.env = env
+	return nil
 }
 
 // Login runs the 'login' command.
@@ -645,17 +662,59 @@ func (c *Client) Version(ctx context.Context) (*Version, error) {
 	}, nil
 }
 
+// NewOSEnviron returns the current environment variables from the OS.
+func NewOSEnviron() Environ {
+	env := map[string]string{}
+	for _, ev := range os.Environ() {
+		parts := strings.SplitN(ev, "=", 2)
+		if len(parts) == 0 {
+			continue
+		}
+		k := parts[0]
+		v := ""
+		if len(parts) == 2 {
+			v = parts[1]
+		}
+		env[k] = v
+	}
+	return env
+}
+
+// ToSlice converts the environment variables to a slice.
+func (e Environ) ToSlice() []string {
+	keys := make([]string, 0, len(e))
+	for k := range e {
+		keys = append(keys, k)
+	}
+	// Ensure the order of the keys.
+	slices.Sort(keys)
+	env := make([]string, 0, len(e))
+	for _, k := range keys {
+		env = append(env, k+"="+e[k])
+	}
+	return env
+}
+
+var defaultEnvs = map[string]string{
+	// Disable the update notifier and upgrade suggestions.
+	"ATLAS_NO_UPDATE_NOTIFIER":     "1",
+	"ATLAS_NO_UPGRADE_SUGGESTIONS": "1",
+}
+
 // runCommand runs the given command and returns its output.
 func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, error) {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, c.execPath, args...)
 	cmd.Dir = c.workingDir
-	// Set ATLAS_NO_UPDATE_NOTIFIER=1 to disable the update notifier.
-	// use os.Environ() to avoid overriding the user's environment.
-	cmd.Env = append(os.Environ(),
-		"ATLAS_NO_UPDATE_NOTIFIER=1",
-		"ATLAS_NO_UPGRADE_SUGGESTIONS=1",
-	)
+	var env Environ
+	if c.env == nil {
+		// Initialize the environment variables from the OS.
+		env = NewOSEnviron()
+	} else {
+		env = maps.Clone(c.env)
+	}
+	maps.Copy(env, defaultEnvs)
+	cmd.Env = env.ToSlice()
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
