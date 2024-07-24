@@ -682,16 +682,12 @@ func NewOSEnviron() Environ {
 
 // ToSlice converts the environment variables to a slice.
 func (e Environ) ToSlice() []string {
-	keys := make([]string, 0, len(e))
-	for k := range e {
-		keys = append(keys, k)
-	}
-	// Ensure the order of the keys.
-	slices.Sort(keys)
 	env := make([]string, 0, len(e))
-	for _, k := range keys {
-		env = append(env, k+"="+e[k])
+	for k, v := range e {
+		env = append(env, k+"="+v)
 	}
+	// Ensure the order of the envs.
+	slices.Sort(env)
 	return env
 }
 
