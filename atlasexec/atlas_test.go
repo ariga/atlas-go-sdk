@@ -1067,3 +1067,32 @@ func TestSchemaTest(t *testing.T) {
 		})
 	}
 }
+
+func Test_Vars2(t *testing.T) {
+	var vars = atlasexec.Vars2{
+		"key1": "value1",
+		"key2": "value2",
+		"key3": []string{"value3", "value4"},
+		"key4": 100,
+		"key5": []int{1, 2, 3},
+		"key6": []stringer{{}, {}},
+	}
+	require.Equal(t, []string{
+		"--var", "key1=value1",
+		"--var", "key2=value2",
+		"--var", "key3=value3",
+		"--var", "key3=value4",
+		"--var", "key4=100",
+		"--var", "key5=1",
+		"--var", "key5=2",
+		"--var", "key5=3",
+		"--var", "key6=foo",
+		"--var", "key6=foo",
+	}, vars.AsArgs())
+}
+
+type stringer struct{}
+
+func (s stringer) String() string {
+	return "foo"
+}

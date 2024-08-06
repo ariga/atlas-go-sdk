@@ -10,6 +10,7 @@ import (
 	"maps"
 	"os"
 	"os/exec"
+	"reflect"
 	"regexp"
 	"slices"
 	"strconv"
@@ -38,7 +39,7 @@ type (
 		Context     *RunContext
 		ConfigURL   string
 		Env         string
-		Vars        Vars
+		Vars        VarArgs
 	}
 	// TriggerType defines the type for the "trigger_type" enum field.
 	TriggerType string
@@ -64,7 +65,7 @@ type (
 		ExecOrder       MigrateExecOrder
 		Amount          uint64
 		DryRun          bool
-		Vars            Vars
+		Vars            VarArgs
 	}
 	// MigrateDownParams are the parameters for the `migrate down` command.
 	MigrateDownParams struct {
@@ -78,7 +79,7 @@ type (
 		Amount          uint64
 		ToVersion       string
 		ToTag           string
-		Vars            Vars
+		Vars            VarArgs
 
 		// Not yet supported
 		// DryRun          bool
@@ -91,7 +92,7 @@ type (
 		DirURL          string
 		URL             string
 		RevisionsSchema string
-		Vars            Vars
+		Vars            VarArgs
 	}
 	// RunContext describes what triggered this command (e.g., GitHub Action).
 	RunContext struct {
@@ -113,7 +114,7 @@ type (
 		Context   *RunContext
 		Web       bool
 		Latest    uint64
-		Vars      Vars
+		Vars      VarArgs
 		Writer    io.Writer
 		Base      string
 		Format    string
@@ -128,7 +129,7 @@ type (
 		DirFormat       string
 		Run             string
 		RevisionsSchema string
-		Vars            Vars
+		Vars            VarArgs
 	}
 	// SchemaApplyParams are the parameters for the `schema apply` command.
 	SchemaApplyParams struct {
@@ -141,7 +142,7 @@ type (
 		Schema    []string
 		To        string
 		URL       string
-		Vars      Vars
+		Vars      VarArgs
 	}
 	// SchemaInspectParams are the parameters for the `schema inspect` command.
 	SchemaInspectParams struct {
@@ -152,7 +153,7 @@ type (
 		Format    string
 		Schema    []string
 		URL       string
-		Vars      Vars
+		Vars      VarArgs
 	}
 	// SchemaTestParams are the parameters for the `schema test` command.
 	SchemaTestParams struct {
@@ -161,9 +162,20 @@ type (
 		URL       string
 		DevURL    string
 		Run       string
-		Vars      Vars
+		Vars      VarArgs
 	}
+	// VarArgs is a map of variables for the command.
+	VarArgs interface {
+		// AsArgs returns the variables as arguments.
+		AsArgs() []string
+	}
+	// Vars is a map of variables for the command.
+	//
+	// Deprecated: Use Vars2 instead.
 	Vars map[string]string
+	// Vars2 is a map of variables for the command.
+	// It supports multiple values for the same key (list).
+	Vars2 map[string]any
 	// Environ is a map of environment variables.
 	Environ map[string]string
 )
@@ -276,7 +288,9 @@ func (c *Client) MigratePush(ctx context.Context, params *MigratePushParams) (st
 	if params.Env != "" {
 		args = append(args, "--env", params.Env)
 	}
-	args = append(args, params.Vars.AsArgs()...)
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
 	if params.Name == "" {
 		return "", errors.New("directory name cannot be empty")
 	}
@@ -337,7 +351,9 @@ func (c *Client) MigrateApplySlice(ctx context.Context, params *MigrateApplyPara
 	if params.Amount > 0 {
 		args = append(args, strconv.FormatUint(params.Amount, 10))
 	}
-	args = append(args, params.Vars.AsArgs()...)
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
 	return jsonDecodeErr[MigrateApply](newMigrateApplyError)(c.runCommand(ctx, args))
 }
 
@@ -378,7 +394,9 @@ func (c *Client) MigrateDown(ctx context.Context, params *MigrateDownParams) (*M
 	if params.Amount > 0 {
 		args = append(args, strconv.FormatUint(params.Amount, 10))
 	}
-	args = append(args, params.Vars.AsArgs()...)
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
 	r, err := c.runCommand(ctx, args)
 	if cliErr := (&Error{}); errors.As(err, &cliErr) && cliErr.Stderr == "" {
 		r = strings.NewReader(cliErr.Stdout)
@@ -419,7 +437,9 @@ func (c *Client) MigrateTest(ctx context.Context, params *MigrateTestParams) (st
 	if params.Run != "" {
 		args = append(args, "--run", params.Run)
 	}
-	args = append(args, params.Vars.AsArgs()...)
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
 	return stringVal(c.runCommand(ctx, args))
 }
 
@@ -460,7 +480,9 @@ func (c *Client) SchemaApplySlice(ctx context.Context, params *SchemaApplyParams
 	if len(params.Exclude) > 0 {
 		args = append(args, "--exclude", strings.Join(params.Exclude, ","))
 	}
-	args = append(args, params.Vars.AsArgs()...)
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
 	return jsonDecodeErr[SchemaApply](newSchemaApplyError)(c.runCommand(ctx, args))
 }
 
@@ -491,7 +513,9 @@ func (c *Client) SchemaInspect(ctx context.Context, params *SchemaInspectParams)
 	if len(params.Exclude) > 0 {
 		args = append(args, "--exclude", strings.Join(params.Exclude, ","))
 	}
-	args = append(args, params.Vars.AsArgs()...)
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
 	return stringVal(c.runCommand(ctx, args))
 }
 
@@ -513,7 +537,9 @@ func (c *Client) SchemaTest(ctx context.Context, params *SchemaTestParams) (stri
 	if params.Run != "" {
 		args = append(args, "--run", params.Run)
 	}
-	args = append(args, params.Vars.AsArgs()...)
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
 	return stringVal(c.runCommand(ctx, args))
 }
 
@@ -547,7 +573,9 @@ func lintArgs(params *MigrateLintParams) ([]string, error) {
 	if params.Latest > 0 {
 		args = append(args, "--latest", strconv.FormatUint(params.Latest, 10))
 	}
-	args = append(args, params.Vars.AsArgs()...)
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
 	format := "{{ json . }}"
 	if params.Format != "" {
 		format = params.Format
@@ -630,7 +658,9 @@ func (c *Client) MigrateStatus(ctx context.Context, params *MigrateStatusParams)
 	if params.RevisionsSchema != "" {
 		args = append(args, "--revisions-schema", params.RevisionsSchema)
 	}
-	args = append(args, params.Vars.AsArgs()...)
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
 	// NOTE: This command only support one result.
 	return firstResult(jsonDecode[MigrateStatus](c.runCommand(ctx, args)))
 }
@@ -801,6 +831,29 @@ func (e *Error) Unwrap() error {
 	return e.err
 }
 
+// AsArgs returns the variables as arguments.
+func (vars Vars2) AsArgs() []string {
+	keys := make([]string, 0, len(vars))
+	for k := range vars {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+	var args []string
+	for _, k := range keys {
+		switch reflect.TypeOf(vars[k]).Kind() {
+		case reflect.Slice, reflect.Array:
+			ev := reflect.ValueOf(vars[k])
+			for i := range ev.Len() {
+				args = append(args, "--var", fmt.Sprintf("%s=%v", k, ev.Index(i)))
+			}
+		default:
+			args = append(args, "--var", fmt.Sprintf("%s=%v", k, vars[k]))
+		}
+	}
+	return args
+}
+
+// AsArgs returns the variables as arguments.
 func (v Vars) AsArgs() []string {
 	var args []string
 	for k, v := range v {
