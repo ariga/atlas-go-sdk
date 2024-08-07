@@ -176,9 +176,10 @@ type (
 	}
 	// Version contains the result of an 'atlas version' run.
 	Version struct {
-		Version string `json:"Version"`
-		SHA     string `json:"SHA,omitempty"`
-		Canary  bool   `json:"Canary,omitempty"`
+		Version   string `json:"Version"`
+		SHA       string `json:"SHA,omitempty"`
+		Canary    bool   `json:"Canary,omitempty"`
+		Community bool   `json:"Community,omitempty"`
 	}
 )
 
