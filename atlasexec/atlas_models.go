@@ -195,6 +195,19 @@ type (
 	}
 )
 
+// var reVersion = regexp.MustCompile(`^atlas version v(\d+\.\d+.\d+)-?([a-z0-9]*)?`)
+func (v Version) String() string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "atlas version v%s", v.Version)
+	if v.SHA != "" {
+		fmt.Fprintf(&b, "-%s", v.SHA)
+	}
+	if v.Canary {
+		b.WriteString("-canary")
+	}
+	return b.String()
+}
+
 // Summary of the migration attempt.
 func (a *MigrateApply) Summary(ident string) string {
 	var (

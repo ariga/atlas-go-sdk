@@ -801,6 +801,9 @@ func TestVersion(t *testing.T) {
 			v, err := c.Version(context.Background())
 			require.NoError(t, err)
 			require.Equal(t, tt.expect, v)
+			if tt.env != "" {
+				require.Equal(t, "atlas version "+tt.env, v.String())
+			}
 		})
 	}
 }
