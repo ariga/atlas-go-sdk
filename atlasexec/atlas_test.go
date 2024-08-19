@@ -820,50 +820,53 @@ func sqlitedb(t *testing.T) string {
 func TestMigrateApply(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
-	// Mock the client with a script that just prints the arguments to stderr and
-	// exit with an error code.
-	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-args.sh"))
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
 	require.NoError(t, err)
 
 	for _, tt := range []struct {
 		name   string
 		params *atlasexec.MigrateApplyParams
-		expect string
+		args   string
+		stdout string
 	}{
 		{
 			name:   "no params",
 			params: &atlasexec.MigrateApplyParams{},
-			expect: "migrate apply --format {{ json . }}",
+			args:   "migrate apply --format {{ json . }}",
+			stdout: `{"Driver":"mysql"}`,
 		},
 		{
 			name: "with env",
 			params: &atlasexec.MigrateApplyParams{
 				Env: "test",
 			},
-			expect: "migrate apply --format {{ json . }} --env test",
+			args:   "migrate apply --format {{ json . }} --env test",
+			stdout: `{"Driver":"mysql"}`,
 		},
 		{
 			name: "with url",
 			params: &atlasexec.MigrateApplyParams{
 				URL: "sqlite://file?_fk=1&cache=shared&mode=memory",
 			},
-			expect: "migrate apply --format {{ json . }} --url sqlite://file?_fk=1&cache=shared&mode=memory",
+			args:   "migrate apply --format {{ json . }} --url sqlite://file?_fk=1&cache=shared&mode=memory",
+			stdout: `{"Driver":"mysql"}`,
 		},
 		{
 			name: "with exec order",
 			params: &atlasexec.MigrateApplyParams{
 				ExecOrder: atlasexec.ExecOrderLinear,
 			},
-			expect: "migrate apply --format {{ json . }} --exec-order linear",
+			args:   "migrate apply --format {{ json . }} --exec-order linear",
+			stdout: `{"Driver":"mysql"}`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := c.MigrateApply(context.Background(), tt.params)
-			require.Error(t, err)
-			// The script mock-args.sh exit with an error code.
-			// So, our atlasexec.MigrateApply should return a Error.
-			// Which contains all output from the script (both stdout and stderr).
-			require.Equal(t, tt.expect, err.Error())
+			t.Setenv("TEST_ARGS", tt.args)
+			t.Setenv("TEST_STDOUT", tt.stdout)
+			result, err := c.MigrateApply(context.Background(), tt.params)
+			require.NoError(t, err)
+			require.NotNil(t, result)
+			require.Equal(t, "mysql", result.Driver)
 		})
 	}
 }
@@ -871,71 +874,77 @@ func TestMigrateApply(t *testing.T) {
 func TestMigrateDown(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
-	// Mock the client with a script that just prints the arguments to stderr and
-	// exit with an error code.
-	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-args.sh"))
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
 	require.NoError(t, err)
 
 	for _, tt := range []struct {
 		name   string
 		params *atlasexec.MigrateDownParams
-		expect string
+		args   string
+		stdout string
 	}{
 		{
 			name:   "no params",
 			params: &atlasexec.MigrateDownParams{},
-			expect: "migrate down --format {{ json . }}",
+			args:   "migrate down --format {{ json . }}",
+			stdout: `{"Status":"Pending"}`,
 		},
 		{
 			name: "with env",
 			params: &atlasexec.MigrateDownParams{
 				Env: "test",
 			},
-			expect: "migrate down --format {{ json . }} --env test",
+			args:   "migrate down --format {{ json . }} --env test",
+			stdout: `{"Status":"Pending"}`,
 		},
 		{
 			name: "with url",
 			params: &atlasexec.MigrateDownParams{
 				URL: "sqlite://file?_fk=1&cache=shared&mode=memory",
 			},
-			expect: "migrate down --format {{ json . }} --url sqlite://file?_fk=1&cache=shared&mode=memory",
+			args:   "migrate down --format {{ json . }} --url sqlite://file?_fk=1&cache=shared&mode=memory",
+			stdout: `{"Status":"Pending"}`,
 		},
 		{
 			name: "with target version",
 			params: &atlasexec.MigrateDownParams{
 				ToVersion: "12345",
 			},
-			expect: "migrate down --format {{ json . }} --to-version 12345",
+			args:   "migrate down --format {{ json . }} --to-version 12345",
+			stdout: `{"Status":"Pending"}`,
 		},
 		{
 			name: "with tag version",
 			params: &atlasexec.MigrateDownParams{
 				ToTag: "12345",
 			},
-			expect: "migrate down --format {{ json . }} --to-tag 12345",
+			args:   "migrate down --format {{ json . }} --to-tag 12345",
+			stdout: `{"Status":"Pending"}`,
 		},
 		{
 			name: "with amount",
 			params: &atlasexec.MigrateDownParams{
 				Amount: 10,
 			},
-			expect: "migrate down --format {{ json . }} 10",
+			args:   "migrate down --format {{ json . }} 10",
+			stdout: `{"Status":"Pending"}`,
 		},
 		{
 			name: "dev-url",
 			params: &atlasexec.MigrateDownParams{
 				DevURL: "url",
 			},
-			expect: "migrate down --format {{ json . }} --dev-url url",
+			args:   "migrate down --format {{ json . }} --dev-url url",
+			stdout: `{"Status":"Pending"}`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := c.MigrateDown(context.Background(), tt.params)
-			require.Error(t, err)
-			// The script mock-args.sh exit with an error code.
-			// So, our atlasexec.MigrateApply should return a Error.
-			// Which contains all output from the script (both stdout and stderr).
-			require.Equal(t, tt.expect, err.Error())
+			t.Setenv("TEST_ARGS", tt.args)
+			t.Setenv("TEST_STDOUT", tt.stdout)
+			result, err := c.MigrateDown(context.Background(), tt.params)
+			require.NoError(t, err)
+			require.NotNil(t, result)
+			require.Equal(t, "Pending", result.Status)
 		})
 	}
 }
@@ -943,55 +952,60 @@ func TestMigrateDown(t *testing.T) {
 func TestMigrateTest(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
-	// Mock the client with a script that just prints the arguments to stderr and
-	// exit with an error code.
-	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-args.sh"))
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
 	require.NoError(t, err)
 
 	for _, tt := range []struct {
 		name   string
 		params *atlasexec.MigrateTestParams
-		expect string
+		args   string
+		stdout string
 	}{
 		{
 			name:   "no params",
 			params: &atlasexec.MigrateTestParams{},
-			expect: "migrate test",
+			args:   "migrate test",
+			stdout: "test result",
 		},
 		{
 			name: "with env",
 			params: &atlasexec.MigrateTestParams{
 				Env: "test",
 			},
-			expect: "migrate test --env test",
+			args:   "migrate test --env test",
+			stdout: "test result",
 		},
 		{
 			name: "with config",
 			params: &atlasexec.MigrateTestParams{
 				ConfigURL: "file://config.hcl",
 			},
-			expect: "migrate test --config file://config.hcl",
+			args:   "migrate test --config file://config.hcl",
+			stdout: "test result",
 		},
 		{
 			name: "with dev-url",
 			params: &atlasexec.MigrateTestParams{
 				DevURL: "sqlite://file?_fk=1&cache=shared&mode=memory",
 			},
-			expect: "migrate test --dev-url sqlite://file?_fk=1&cache=shared&mode=memory",
+			args:   "migrate test --dev-url sqlite://file?_fk=1&cache=shared&mode=memory",
+			stdout: "test result",
 		},
 		{
 			name: "with run",
 			params: &atlasexec.MigrateTestParams{
 				Run: "example",
 			},
-			expect: "migrate test --run example",
+			args:   "migrate test --run example",
+			stdout: "test result",
 		},
 		{
 			name: "with revisions-schema",
 			params: &atlasexec.MigrateTestParams{
 				RevisionsSchema: "schema",
 			},
-			expect: "migrate test --revisions-schema schema",
+			args:   "migrate test --revisions-schema schema",
+			stdout: "test result",
 		},
 		{
 			name: "with run context",
@@ -1000,16 +1014,16 @@ func TestMigrateTest(t *testing.T) {
 					Repo: "testing-repo",
 				},
 			},
-			expect: "migrate test --context {\"repo\":\"testing-repo\"}",
+			args:   "migrate test --context {\"repo\":\"testing-repo\"}",
+			stdout: "test result",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := c.MigrateTest(context.Background(), tt.params)
-			require.Error(t, err)
-			// The script mock-args.sh exit with an error code.
-			// So, our atlasexec.MigrateTest should return a Error.
-			// Which contains all output from the script (both stdout and stderr).
-			require.Equal(t, tt.expect, err.Error())
+			t.Setenv("TEST_ARGS", tt.args)
+			t.Setenv("TEST_STDOUT", tt.stdout)
+			result, err := c.MigrateTest(context.Background(), tt.params)
+			require.NoError(t, err)
+			require.Equal(t, tt.stdout, result)
 		})
 	}
 }
@@ -1017,57 +1031,60 @@ func TestMigrateTest(t *testing.T) {
 func TestSchemaTest(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
-	// Mock the client with a script that just prints the arguments to stderr and
-	// exit with an error code.
-	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-args.sh"))
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
 	require.NoError(t, err)
 
 	for _, tt := range []struct {
 		name   string
 		params *atlasexec.SchemaTestParams
-		expect string
+		args   string
+		stdout string
 	}{
 		{
 			name:   "no params",
 			params: &atlasexec.SchemaTestParams{},
-			expect: "schema test",
+			args:   "schema test",
+			stdout: "test result",
 		},
 		{
 			name: "with env",
 			params: &atlasexec.SchemaTestParams{
 				Env: "test",
 			},
-			expect: "schema test --env test",
+			args:   "schema test --env test",
+			stdout: "test result",
 		},
 		{
 			name: "with config",
 			params: &atlasexec.SchemaTestParams{
 				ConfigURL: "file://config.hcl",
 			},
-			expect: "schema test --config file://config.hcl",
+			args:   "schema test --config file://config.hcl",
+			stdout: "test result",
 		},
 		{
 			name: "with dev-url",
 			params: &atlasexec.SchemaTestParams{
 				DevURL: "sqlite://file?_fk=1&cache=shared&mode=memory",
 			},
-			expect: "schema test --dev-url sqlite://file?_fk=1&cache=shared&mode=memory",
+			args:   "schema test --dev-url sqlite://file?_fk=1&cache=shared&mode=memory",
+			stdout: "test result",
 		},
 		{
 			name: "with run",
 			params: &atlasexec.SchemaTestParams{
 				Run: "example",
 			},
-			expect: "schema test --run example",
+			args:   "schema test --run example",
+			stdout: "test result",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := c.SchemaTest(context.Background(), tt.params)
-			require.Error(t, err)
-			// The script mock-args.sh exit with an error code.
-			// So, our atlasexec.SchemaTest should return a Error.
-			// Which contains all output from the script (both stdout and stderr).
-			require.Equal(t, tt.expect, err.Error())
+			t.Setenv("TEST_ARGS", tt.args)
+			t.Setenv("TEST_STDOUT", tt.stdout)
+			result, err := c.SchemaTest(context.Background(), tt.params)
+			require.NoError(t, err)
+			require.Equal(t, tt.stdout, result)
 		})
 	}
 }
