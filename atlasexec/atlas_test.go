@@ -777,7 +777,7 @@ func TestVersion(t *testing.T) {
 		expect *atlasexec.Version
 	}{
 		{
-			env:    "",
+			env:    "v1.2.3",
 			expect: &atlasexec.Version{Version: "1.2.3"},
 		},
 		{
@@ -797,7 +797,8 @@ func TestVersion(t *testing.T) {
 		},
 	} {
 		t.Run(tt.env, func(t *testing.T) {
-			t.Setenv("TEST_ATLAS_VERSION", tt.env)
+			t.Setenv("TEST_ARGS", "version")
+			t.Setenv("TEST_STDOUT", fmt.Sprintf("atlas version %s", tt.env))
 			v, err := c.Version(context.Background())
 			require.NoError(t, err)
 			require.Equal(t, tt.expect, v)
