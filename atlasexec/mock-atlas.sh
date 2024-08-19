@@ -6,7 +6,7 @@ if [[ "$TEST_ARGS" != "$@" ]]; then
 fi
 
 if [[ "$TEST_STDOUT" != "" ]]; then
-  echo -n "$TEST_STDOUT"
+  echo -n $TEST_STDOUT
   exit 0
 fi
 
