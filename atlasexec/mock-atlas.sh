@@ -6,10 +6,10 @@ if [[ "$TEST_ARGS" != "$@" ]]; then
 fi
 
 if [[ "$TEST_STDOUT" != "" ]]; then
-  echo $TEST_STDOUT
+  echo -n $TEST_STDOUT
   exit 0
 fi
 
 TEST_STDERR="${TEST_STDERR:-Missing stderr either stdout input for the test}"
->&2 echo $TEST_STDERR
+>&2 echo -n $TEST_STDERR
 exit 1
