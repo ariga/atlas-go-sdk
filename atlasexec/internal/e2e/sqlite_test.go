@@ -127,3 +127,34 @@ func Test_MultiTenants(t *testing.T) {
 		require.Contains(t, mae.Result[1].Error, "UNIQUE constraint failed", "Should be the correct error")
 	})
 }
+
+func Test_SchemaPlan(t *testing.T) {
+	runTestWithVersions(t, []string{"latest"}, "schema-plan", func(t *testing.T, ver *atlasexec.Version, wd *atlasexec.WorkingDir, c *atlasexec.Client) {
+		ctx := context.Background()
+		plan, err := c.SchemaPlan(ctx, &atlasexec.SchemaPlanParams{
+			From:   []string{"file://schema-1.lt.hcl"},
+			To:     []string{"file://schema-2.lt.hcl"},
+			DevURL: "sqlite://:memory:?_fk=1",
+			DryRun: true,
+		})
+		require.NoError(t, err)
+		f := plan.File
+		require.NotNil(t, f, "Should have a file")
+		require.Equal(t, "-- Add column \"c2\" to table: \"t1\"\nALTER TABLE `t1` ADD COLUMN `c2` text NOT NULL;\n", f.Migration, "Should be the correct migration")
+		require.Empty(t, f.URL, "Should be no URL")
+	})
+	runTestWithVersions(t, []string{"latest"}, "schema-plan", func(t *testing.T, ver *atlasexec.Version, wd *atlasexec.WorkingDir, c *atlasexec.Client) {
+		ctx := context.Background()
+		plan, err := c.SchemaPlan(ctx, &atlasexec.SchemaPlanParams{
+			From:   []string{"file://schema-1.lt.hcl"},
+			To:     []string{"file://schema-2.lt.hcl"},
+			DevURL: "sqlite://:memory:?_fk=1",
+			Save:   true,
+		})
+		require.NoError(t, err)
+		f := plan.File
+		require.NotNil(t, f, "Should have a file")
+		require.Equal(t, "-- Add column \"c2\" to table: \"t1\"\nALTER TABLE `t1` ADD COLUMN `c2` text NOT NULL;\n", f.Migration, "Should be the correct migration")
+		require.Regexp(t, "^file://\\d{14}\\.plan\\.hcl$", f.URL, "Should be an URL to a file")
+	})
+}
