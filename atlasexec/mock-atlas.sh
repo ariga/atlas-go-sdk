@@ -11,5 +11,5 @@ if [[ "$TEST_STDOUT" != "" ]]; then
 fi
 
 TEST_STDERR="${TEST_STDERR:-Missing stderr either stdout input for the test}"
-echo $TEST_STDERR
+>&2 echo $TEST_STDERR
 exit 1
