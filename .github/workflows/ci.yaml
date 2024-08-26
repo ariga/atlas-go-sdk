@@ -47,8 +47,11 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: '1.21'
-      - run: |
-          curl -sSf 'https://atlasgo.sh?test=1' | env ATLAS_DEBUG=true sh
+      - uses: ariga/setup-atlas@v0
+        with:
+          cloud-token: ${{ secrets.ATLAS_TOKEN }}
+        env:
+          ATLAS_DEBUG: "true"
       - name: Run tests
         run: go test ./atlasexec/internal/e2e
         env:

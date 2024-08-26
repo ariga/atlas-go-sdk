@@ -46,15 +46,17 @@ type (
 	// RunContext is an input type for describing the context of where the
 	// command is triggered from. For example, a GitHub Action on the master branch.
 	RunContext struct {
-		Repo     string `json:"repo,omitempty"`
-		Path     string `json:"path,omitempty"`
-		Branch   string `json:"branch,omitempty"`
-		Commit   string `json:"commit,omitempty"`
-		URL      string `json:"url,omitempty"`
-		Username string `json:"username,omitempty"` // The username that triggered the event that initiated the command.
-		UserID   string `json:"userID,omitempty"`   // The user ID that triggered the event that initiated the command.
-		SCMType  string `json:"scmType,omitempty"`  // Source control management system type.
+		Repo     string  `json:"repo,omitempty"`
+		Path     string  `json:"path,omitempty"`
+		Branch   string  `json:"branch,omitempty"`
+		Commit   string  `json:"commit,omitempty"`
+		URL      string  `json:"url,omitempty"`
+		Username string  `json:"username,omitempty"` // The username that triggered the event that initiated the command.
+		UserID   string  `json:"userID,omitempty"`   // The user ID that triggered the event that initiated the command.
+		SCMType  SCMType `json:"scmType,omitempty"`  // Source control management system type.
 	}
+	// SCMType is a type for the "scm_type" enum field.
+	SCMType string // Only GITHUB is supported for now.
 	// DeployRunContext is an input type for describing the context in which
 	// `migrate-apply` and `migrate down` were used. For example, a GitHub Action with version v1.2.3
 	DeployRunContext struct {
@@ -76,6 +78,11 @@ const (
 	TriggerTypeTerraform    TriggerType = "TERRAFORM"
 	TriggerTypeGithubAction TriggerType = "GITHUB_ACTION"
 	TriggerTypeCircleCIOrb  TriggerType = "CIRCLECI_ORB"
+)
+
+// SCMType values.
+const (
+	SCMTypeGithub SCMType = "GITHUB"
 )
 
 // ExecutionOrder values.

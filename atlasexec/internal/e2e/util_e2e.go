@@ -33,6 +33,9 @@ func runTestWithVersions(t *testing.T, versions []string, fixtureName string, cb
 				execPath = localBinPath
 			} else {
 				execPath = downloadAtlas(t, av)
+				if err := os.Chmod(execPath, 0755); err != nil {
+					t.Fatalf("unable to make atlas executable: %s", err)
+				}
 			}
 			c, err := atlasexec.NewClient("", execPath)
 			if err != nil {

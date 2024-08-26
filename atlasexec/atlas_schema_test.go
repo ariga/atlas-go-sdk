@@ -215,3 +215,263 @@ schema "main" {
 }
 `, s)
 }
+
+func TestSchema_Plan(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name   string
+		params *atlasexec.SchemaPlanParams
+		args   string
+	}{
+		{
+			name:   "no params",
+			params: &atlasexec.SchemaPlanParams{},
+			args:   "schema plan --format {{ json . }} --auto-approve",
+		},
+		{
+			name: "with env",
+			params: &atlasexec.SchemaPlanParams{
+				Env: "test",
+			},
+			args: "schema plan --format {{ json . }} --env test --auto-approve",
+		},
+		{
+			name: "with from to",
+			params: &atlasexec.SchemaPlanParams{
+				From: []string{"1", "2"},
+				To:   []string{"2", "3"},
+			},
+			args: `schema plan --format {{ json . }} --from 1,2 --to 2,3 --auto-approve`,
+		},
+		{
+			name: "with config",
+			params: &atlasexec.SchemaPlanParams{
+				ConfigURL: "file://config.hcl",
+			},
+			args: "schema plan --format {{ json . }} --config file://config.hcl --auto-approve",
+		},
+		{
+			name: "with dev-url",
+			params: &atlasexec.SchemaPlanParams{
+				DevURL: "sqlite://file?_fk=1&cache=shared&mode=memory",
+			},
+			args: "schema plan --format {{ json . }} --dev-url sqlite://file?_fk=1&cache=shared&mode=memory --auto-approve",
+		},
+		{
+			name: "with name",
+			params: &atlasexec.SchemaPlanParams{
+				Name: "example",
+			},
+			args: "schema plan --format {{ json . }} --name example --auto-approve",
+		},
+		{
+			name: "with dry-run",
+			params: &atlasexec.SchemaPlanParams{
+				DryRun: true,
+			},
+			args: "schema plan --format {{ json . }} --dry-run",
+		},
+		{
+			name: "with save",
+			params: &atlasexec.SchemaPlanParams{
+				Save: true,
+			},
+			args: "schema plan --format {{ json . }} --save --auto-approve",
+		},
+		{
+			name: "with push",
+			params: &atlasexec.SchemaPlanParams{
+				Repo: "testing-repo",
+				Push: true,
+			},
+			args: "schema plan --format {{ json . }} --repo testing-repo --push --auto-approve",
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("TEST_ARGS", tt.args)
+			t.Setenv("TEST_STDOUT", `{"Repo":"foo"}`)
+			result, err := c.SchemaPlan(context.Background(), tt.params)
+			require.NoError(t, err)
+			require.Equal(t, "foo", result.Repo)
+		})
+	}
+}
+
+func TestSchema_PlanPush(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name   string
+		params *atlasexec.SchemaPlanPushParams
+		args   string
+	}{
+		{
+			name: "with auto-approve",
+			params: &atlasexec.SchemaPlanPushParams{
+				Repo: "testing-repo",
+				File: "file://plan.hcl",
+			},
+			args: "schema plan push --format {{ json . }} --file file://plan.hcl --repo testing-repo --auto-approve",
+		},
+		{
+			name: "with pending status",
+			params: &atlasexec.SchemaPlanPushParams{
+				Pending: true,
+				File:    "file://plan.hcl",
+			},
+			args: "schema plan push --format {{ json . }} --file file://plan.hcl --pending",
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("TEST_ARGS", tt.args)
+			t.Setenv("TEST_STDOUT", `{"Repo":"foo"}`)
+			result, err := c.SchemaPlanPush(context.Background(), tt.params)
+			require.NoError(t, err)
+			require.Equal(t, `{"Repo":"foo"}`, result)
+		})
+	}
+}
+
+func TestSchema_PlanLint(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name   string
+		params *atlasexec.SchemaPlanLintParams
+		args   string
+	}{
+		{
+			name: "with repo",
+			params: &atlasexec.SchemaPlanLintParams{
+				Repo: "testing-repo",
+				File: "file://plan.hcl",
+			},
+			args: "schema plan lint --format {{ json . }} --file file://plan.hcl --repo testing-repo --auto-approve",
+		},
+		{
+			name: "with file only",
+			params: &atlasexec.SchemaPlanLintParams{
+				File: "file://plan.hcl",
+			},
+			args: "schema plan lint --format {{ json . }} --file file://plan.hcl --auto-approve",
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("TEST_ARGS", tt.args)
+			t.Setenv("TEST_STDOUT", `{"Repo":"foo"}`)
+			result, err := c.SchemaPlanLint(context.Background(), tt.params)
+			require.NoError(t, err)
+			require.Equal(t, "foo", result.Repo)
+		})
+	}
+}
+
+func TestSchema_PlanValidate(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name   string
+		params *atlasexec.SchemaPlanValidateParams
+		args   string
+	}{
+		{
+			name: "with repo",
+			params: &atlasexec.SchemaPlanValidateParams{
+				Repo: "testing-repo",
+				File: "file://plan.hcl",
+			},
+			args: "schema plan validate --file file://plan.hcl --repo testing-repo --auto-approve",
+		},
+		{
+			name: "with file only",
+			params: &atlasexec.SchemaPlanValidateParams{
+				File: "file://plan.hcl",
+			},
+			args: "schema plan validate --file file://plan.hcl --auto-approve",
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("TEST_ARGS", tt.args)
+			t.Setenv("TEST_STDOUT", `{"Repo":"foo"}`)
+			err := c.SchemaPlanValidate(context.Background(), tt.params)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestSchema_PlanApprove(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name   string
+		params *atlasexec.SchemaPlanApproveParams
+		args   string
+	}{
+		{
+			name: "with url",
+			params: &atlasexec.SchemaPlanApproveParams{
+				URL: "atlas://app1/plans/foo-plan",
+			},
+			args: "schema plan approve --format {{ json . }} --url atlas://app1/plans/foo-plan",
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("TEST_ARGS", tt.args)
+			t.Setenv("TEST_STDOUT", `{"URL":"atlas://app1/plans/foo-plan", "Link":"some-link", "Status":"APPROVED"}`)
+			result, err := c.SchemaPlanApprove(context.Background(), tt.params)
+			require.NoError(t, err)
+			require.Equal(t, "atlas://app1/plans/foo-plan", result.URL)
+		})
+	}
+}
+
+func TestSchema_PlanPull(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name   string
+		params *atlasexec.SchemaPlanPullParams
+		args   string
+	}{
+		{
+			name: "with url",
+			params: &atlasexec.SchemaPlanPullParams{
+				URL: "atlas://app1/plans/foo-plan",
+			},
+			args: "schema plan pull --url atlas://app1/plans/foo-plan",
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("TEST_ARGS", tt.args)
+			t.Setenv("TEST_STDOUT", "excited-plan")
+			result, err := c.SchemaPlanPull(context.Background(), tt.params)
+			require.NoError(t, err)
+			require.Equal(t, "excited-plan", result)
+		})
+	}
+}

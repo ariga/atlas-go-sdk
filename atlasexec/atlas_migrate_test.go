@@ -500,7 +500,7 @@ func TestAtlasMigrate_Push(t *testing.T) {
 		URL:      "this://is/a/url",
 		UserID:   "test-user-id",
 		Username: "test-user",
-		SCMType:  "GIHUB",
+		SCMType:  atlasexec.SCMTypeGithub,
 	}
 	t.Run("sync", func(t *testing.T) {
 		params := &atlasexec.MigratePushParams{
@@ -806,7 +806,7 @@ func TestAtlasMigrate_LintWithLogin(t *testing.T) {
 				URL:      "this://is/a/url",
 				Username: "test-user",
 				UserID:   "test-user-id",
-				SCMType:  "GIHUB",
+				SCMType:  atlasexec.SCMTypeGithub,
 			}
 		)
 		err = c.MigrateLintError(context.Background(), &atlasexec.MigrateLintParams{
