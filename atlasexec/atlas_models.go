@@ -24,7 +24,7 @@ type (
 		Checks  []*FileChecks // Assertion checks
 		Error   *struct {
 			Stmt string // SQL statement that failed.
-			Text string //	 Error returned by the database.
+			Text string // Error returned by the database.
 		}
 	}
 	// RevertedFile is part of a MigrateDown containing information about a reverted file in a downgrade attempt.
@@ -37,7 +37,7 @@ type (
 		Scope   string   // Scope of the revert. e.g., statement, versions, etc.
 		Error   *struct {
 			Stmt string // SQL statement that failed.
-			Text string //	 Error returned by the database.
+			Text string // Error returned by the database.
 		}
 	}
 	// A SummaryReport contains a summary of the analysis of all files.

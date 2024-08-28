@@ -475,3 +475,47 @@ func TestSchema_PlanPull(t *testing.T) {
 		})
 	}
 }
+
+func TestSchema_PlanList(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name   string
+		params *atlasexec.SchemaPlanListParams
+		args   string
+	}{
+		{
+			name:   "no params",
+			params: &atlasexec.SchemaPlanListParams{},
+			args:   "schema plan list --format {{ json . }} --auto-approve",
+		},
+		{
+			name: "with repo",
+			params: &atlasexec.SchemaPlanListParams{
+				Repo: "atlas://testing-repo",
+				From: []string{"env://url"},
+			},
+			args: "schema plan list --format {{ json . }} --from env://url --repo atlas://testing-repo --auto-approve",
+		},
+		{
+			name: "with repo and pending",
+			params: &atlasexec.SchemaPlanListParams{
+				Repo:    "atlas://testing-repo",
+				Pending: true,
+			},
+			args: "schema plan list --format {{ json . }} --repo atlas://testing-repo --pending --auto-approve",
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("TEST_ARGS", tt.args)
+			t.Setenv("TEST_STDOUT", `[{"Name":"pr-2-ufnTS7Nr"}]`)
+			result, err := c.SchemaPlanList(context.Background(), tt.params)
+			require.NoError(t, err)
+			require.Equal(t, "pr-2-ufnTS7Nr", result[0].Name)
+		})
+	}
+}
