@@ -65,13 +65,25 @@ type (
 		DevURL    string
 
 		From, To []string
-		Name     string
 		Repo     string
+		Name     string
 		// The below are mutually exclusive and can be replaced
 		// with the 'schema plan' sub-commands instead.
 		DryRun     bool // If false, --auto-approve is set.
 		Pending    bool
 		Push, Save bool
+	}
+	// SchemaPlanListParams are the parameters for the `schema plan list` command.
+	SchemaPlanListParams struct {
+		ConfigURL string
+		Env       string
+		Vars      VarArgs
+		Context   *RunContext
+		DevURL    string
+
+		From, To []string
+		Repo     string
+		Pending  bool // If true, only pending plans are listed.
 	}
 	// SchemaPlanPushParams are the parameters for the `schema plan push` command.
 	SchemaPlanPushParams struct {
@@ -82,9 +94,9 @@ type (
 		DevURL    string
 
 		From, To []string
-		File     string
 		Repo     string
-		Pending  bool
+		Pending  bool // Push plan in pending state.
+		File     string
 	}
 	// SchemaPlanPullParams are the parameters for the `schema plan pull` command.
 	SchemaPlanPullParams struct {
@@ -114,8 +126,8 @@ type (
 		DevURL    string
 
 		From, To []string
-		Name     string
 		Repo     string
+		Name     string
 		File     string
 	}
 	// SchemaPlanApproveParams are the parameters for the `schema plan approve` command.
@@ -306,6 +318,52 @@ func (c *Client) SchemaPlan(ctx context.Context, params *SchemaPlanParams) (*Sch
 	}
 	// NOTE: This command only support one result.
 	return firstResult(jsonDecode[SchemaPlan](c.runCommand(ctx, args)))
+}
+
+// SchemaPlanList runs the `schema plan list` command.
+func (c *Client) SchemaPlanList(ctx context.Context, params *SchemaPlanListParams) ([]SchemaPlanFile, error) {
+	args := []string{"schema", "plan", "list", "--format", "{{ json . }}"}
+	// Global flags
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
+	}
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
+	}
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
+	// Hidden flags
+	if params.Context != nil {
+		buf, err := json.Marshal(params.Context)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, "--context", string(buf))
+	}
+	// Flags of the 'schema plan lint' sub-commands
+	if params.DevURL != "" {
+		args = append(args, "--dev-url", params.DevURL)
+	}
+	if len(params.From) > 0 {
+		args = append(args, "--from", listString(params.From))
+	}
+	if len(params.To) > 0 {
+		args = append(args, "--to", listString(params.To))
+	}
+	if params.Repo != "" {
+		args = append(args, "--repo", params.Repo)
+	}
+	if params.Pending {
+		args = append(args, "--pending")
+	}
+	args = append(args, "--auto-approve")
+	// NOTE: This command only support one result.
+	v, err := firstResult(jsonDecode[[]SchemaPlanFile](c.runCommand(ctx, args)))
+	if err != nil {
+		return nil, err
+	}
+	return *v, nil
 }
 
 // SchemaPlanPush runs the `schema plan push` command.
