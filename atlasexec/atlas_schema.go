@@ -32,7 +32,8 @@ type (
 		TxMode  string
 		Exclude []string
 		Schema  []string
-		DryRun  bool
+		DryRun  bool   // If false, --auto-approve is set.
+		PlanURL string // URL of the plan in Atlas format (atlas://<repo>/plans/<id>). (optional)
 	}
 	// SchemaApply contains a summary of a 'schema apply' execution on a database.
 	SchemaApply struct {
@@ -108,15 +109,15 @@ type (
 
 		From, To []string
 		Repo     string
-		Pending  bool // Push plan in pending state.
-		File     string
+		Pending  bool   // Push plan in pending state.
+		File     string // File to push. (optional)
 	}
 	// SchemaPlanPullParams are the parameters for the `schema plan pull` command.
 	SchemaPlanPullParams struct {
 		ConfigURL string
 		Env       string
 		Vars      VarArgs
-		URL       string
+		URL       string // URL to the plan in Atlas format. (required)
 	}
 	// SchemaPlanLintParams are the parameters for the `schema plan lint` command.
 	SchemaPlanLintParams struct {
@@ -226,22 +227,22 @@ func (c *Client) SchemaApply(ctx context.Context, params *SchemaApplyParams) (*S
 // SchemaApplySlice runs the 'schema apply' command for multiple targets.
 func (c *Client) SchemaApplySlice(ctx context.Context, params *SchemaApplyParams) ([]*SchemaApply, error) {
 	args := []string{"schema", "apply", "--format", "{{ json . }}"}
-	if params.Env != "" {
-		args = append(args, "--env", params.Env)
-	}
+	// Global flags
 	if params.ConfigURL != "" {
 		args = append(args, "--config", params.ConfigURL)
 	}
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
+	}
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
+	// Flags of the 'schema apply' sub-commands
 	if params.URL != "" {
 		args = append(args, "--url", params.URL)
 	}
 	if params.To != "" {
 		args = append(args, "--to", params.To)
-	}
-	if params.DryRun {
-		args = append(args, "--dry-run")
-	} else {
-		args = append(args, "--auto-approve")
 	}
 	if params.TxMode != "" {
 		args = append(args, "--tx-mode", params.TxMode)
@@ -255,8 +256,13 @@ func (c *Client) SchemaApplySlice(ctx context.Context, params *SchemaApplyParams
 	if len(params.Exclude) > 0 {
 		args = append(args, "--exclude", listString(params.Exclude))
 	}
-	if params.Vars != nil {
-		args = append(args, params.Vars.AsArgs()...)
+	if params.PlanURL != "" {
+		args = append(args, "--plan", params.PlanURL)
+	}
+	if params.DryRun {
+		args = append(args, "--dry-run")
+	} else {
+		args = append(args, "--auto-approve")
 	}
 	return jsonDecodeErr(newSchemaApplyError)(c.runCommand(ctx, args))
 }

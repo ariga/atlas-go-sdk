@@ -581,3 +581,38 @@ func TestSchema_Push(t *testing.T) {
 		})
 	}
 }
+
+func TestSchema_Apply(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name   string
+		params *atlasexec.SchemaApplyParams
+		args   string
+	}{
+		{
+			name:   "no params",
+			params: &atlasexec.SchemaApplyParams{},
+			args:   "schema apply --format {{ json . }} --auto-approve",
+		},
+		{
+			name: "with plan",
+			params: &atlasexec.SchemaApplyParams{
+				PlanURL: "atlas://app1/plans/foo-plan",
+			},
+			args: "schema apply --format {{ json . }} --plan atlas://app1/plans/foo-plan --auto-approve",
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("TEST_ARGS", tt.args)
+			t.Setenv("TEST_STDOUT", `{"Driver":"sqlite3"}`)
+			result, err := c.SchemaApply(context.Background(), tt.params)
+			require.NoError(t, err)
+			require.Equal(t, "sqlite3", result.Driver)
+		})
+	}
+}
