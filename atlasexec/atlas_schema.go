@@ -7,6 +7,19 @@ import (
 )
 
 type (
+	// SchemaPushParams are the parameters for the `schema push` command.
+	SchemaPushParams struct {
+		ConfigURL string
+		Env       string
+		Vars      VarArgs
+		Context   *RunContext
+		DevURL    string
+
+		Repo        string // Repository name.
+		Tag         string // Tag to push the schema with
+		Version     string // Version of the schema to push. Defaults to the current timestamp.
+		Description string // Description of the schema changes.
+	}
 	// SchemaApplyParams are the parameters for the `schema apply` command.
 	SchemaApplyParams struct {
 		ConfigURL string
@@ -164,6 +177,46 @@ type (
 		Status string `json:"Status,omitempty"` // Status of the plan in the registry.
 	}
 )
+
+// SchemaPush runs the 'schema push' command.
+func (c *Client) SchemaPush(ctx context.Context, params *SchemaPushParams) (string, error) {
+	args := []string{"schema", "push"}
+	// Global flags
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
+	}
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
+	}
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
+	// Hidden flags
+	if params.Context != nil {
+		buf, err := json.Marshal(params.Context)
+		if err != nil {
+			return "", err
+		}
+		args = append(args, "--context", string(buf))
+	}
+	// Flags of the 'schema push' sub-commands
+	if params.DevURL != "" {
+		args = append(args, "--dev-url", params.DevURL)
+	}
+	if params.Tag != "" {
+		args = append(args, "--tag", params.Tag)
+	}
+	if params.Version != "" {
+		args = append(args, "--version", params.Version)
+	}
+	if params.Description != "" {
+		args = append(args, "--desc", params.Description)
+	}
+	if params.Repo != "" {
+		args = append(args, params.Repo)
+	}
+	return stringVal(c.runCommand(ctx, args))
+}
 
 // SchemaApply runs the 'schema apply' command.
 func (c *Client) SchemaApply(ctx context.Context, params *SchemaApplyParams) (*SchemaApply, error) {
