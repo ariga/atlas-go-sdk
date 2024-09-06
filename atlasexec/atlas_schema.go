@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 type (
@@ -35,13 +36,21 @@ type (
 		DryRun  bool   // If false, --auto-approve is set.
 		PlanURL string // URL of the plan in Atlas format (atlas://<repo>/plans/<id>). (optional)
 	}
-	// SchemaApply contains a summary of a 'schema apply' execution on a database.
+	// SchemaApply represents the result of a 'schema apply' command.
 	SchemaApply struct {
 		Env
-		Changes Changes `json:"Changes,omitempty"`
-		// General error that occurred during execution.
-		// e.g., when committing or rolling back a transaction.
-		Error string `json:"Error,omitempty"`
+		// Changes holds the changes applied to the database.
+		// Exists for backward compatibility with the old schema
+		// apply structure as old SDK versions rely on it.
+		Changes Changes      `json:"Changes,omitempty"`
+		Error   string       `json:"Error,omitempty"`   // Any error that occurred during execution.
+		Start   time.Time    `json:"Start,omitempty"`   // When apply (including plan) started.
+		End     time.Time    `json:"End,omitempty"`     // When apply ended.
+		Applied *AppliedFile `json:"Applied,omitempty"` // Applied migration file (pre-planned or computed).
+		// Plan information might be partially filled. For example, if lint is done
+		// during plan-stage, the linting report is available in the Plan field. If
+		// the migration is pre-planned migration, the File.URL is set, etc.
+		Plan *SchemaPlan `json:"Plan,omitempty"`
 	}
 	// SchemaApplyError is returned when an error occurred
 	// during a schema applying attempt.
