@@ -28,13 +28,14 @@ type (
 		Vars      VarArgs
 		DevURL    string
 
-		URL     string
-		To      string
-		TxMode  string
-		Exclude []string
-		Schema  []string
-		DryRun  bool   // If false, --auto-approve is set.
-		PlanURL string // URL of the plan in Atlas format (atlas://<repo>/plans/<id>). (optional)
+		URL         string
+		To          string
+		TxMode      string
+		Exclude     []string
+		Schema      []string
+		DryRun      bool   // If true, --dry-run is set.
+		AutoApprove bool   // If true, --auto-approve is set.
+		PlanURL     string // URL of the plan in Atlas format (atlas://<repo>/plans/<id>). (optional)
 	}
 	// SchemaApply represents the result of a 'schema apply' command.
 	SchemaApply struct {
@@ -268,9 +269,10 @@ func (c *Client) SchemaApplySlice(ctx context.Context, params *SchemaApplyParams
 	if params.PlanURL != "" {
 		args = append(args, "--plan", params.PlanURL)
 	}
-	if params.DryRun {
+	switch {
+	case params.DryRun:
 		args = append(args, "--dry-run")
-	} else {
+	case params.AutoApprove:
 		args = append(args, "--auto-approve")
 	}
 	return jsonDecodeErr(newSchemaApplyError)(c.runCommand(ctx, args))
