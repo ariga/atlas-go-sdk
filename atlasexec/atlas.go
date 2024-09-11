@@ -248,16 +248,46 @@ func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, erro
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
-		cerr := &Error{
+		return nil, &Error{
+			err:    err,
 			Stderr: strings.TrimSpace(stderr.String()),
 			Stdout: strings.TrimSpace(stdout.String()),
 		}
-		if exitErr := (&exec.ExitError{}); errors.As(err, &exitErr) {
-			cerr.err = exitErr
-		}
-		return nil, cerr
 	}
 	return &stdout, nil
+}
+
+// Error is an error returned by the atlasexec package,
+// when it executes the atlas-cli command.
+type Error struct {
+	err    error  // The underlying error.
+	Stdout string // Stdout of the command.
+	Stderr string // Stderr of the command.
+}
+
+// Error implements the error interface.
+func (e *Error) Error() string {
+	if e.Stderr != "" {
+		return e.Stderr
+	}
+	return e.Stdout
+}
+
+// ExitCode returns the exit code of the command.
+// If the error is not an exec.ExitError, it returns 1.
+func (e *Error) ExitCode() int {
+	var exitErr *exec.ExitError
+	if errors.As(e.err, &exitErr) {
+		return exitErr.ExitCode()
+	}
+	// Not an exec.ExitError or nil.
+	// Return the system default exit code.
+	return new(exec.ExitError).ExitCode()
+}
+
+// Unwrap returns the underlying error.
+func (e *Error) Unwrap() error {
+	return e.err
 }
 
 // TempFile creates a temporary file with the given content and extension.
@@ -274,32 +304,6 @@ func TempFile(content, ext string) (string, func() error, error) {
 	return fmt.Sprintf("file://%s", f.Name()), func() error {
 		return os.Remove(f.Name())
 	}, nil
-}
-
-type Error struct {
-	err    *exec.ExitError
-	Stdout string
-	Stderr string
-}
-
-// Error implements the error interface.
-func (e *Error) Error() string {
-	if e.Stderr != "" {
-		return e.Stderr
-	}
-	return e.Stdout
-}
-
-// ExitCode returns the exit code of the command.
-func (e *Error) ExitCode() int {
-	if e.err == nil {
-		return new(exec.ExitError).ExitCode()
-	}
-	return e.err.ExitCode()
-}
-
-func (e *Error) Unwrap() error {
-	return e.err
 }
 
 // AsArgs returns the variables as arguments.
@@ -363,19 +367,20 @@ func jsonDecode[T any](r io.Reader, err error) ([]*T, error) {
 			dst = append(dst, &m)
 		default:
 			return nil, &Error{
+				err:    fmt.Errorf("decoding JSON from stdout: %w", err),
 				Stdout: string(buf),
 			}
 		}
 	}
 }
 
-func jsonDecodeErr[T any](fn func([]*T) error) func(io.Reader, error) ([]*T, error) {
+func jsonDecodeErr[T any](fn func([]*T, string) error) func(io.Reader, error) ([]*T, error) {
 	return func(r io.Reader, err error) ([]*T, error) {
 		if err != nil {
-			if cliErr := (&Error{}); errors.As(err, &cliErr) && cliErr.Stderr == "" {
+			if cliErr := (&Error{}); errors.As(err, &cliErr) && cliErr.Stdout != "" {
 				d, err := jsonDecode[T](strings.NewReader(cliErr.Stdout), nil)
 				if err == nil {
-					return nil, fn(d)
+					return nil, fn(d, cliErr.Stderr)
 				}
 				// If the error is not a JSON, return the original error.
 			}

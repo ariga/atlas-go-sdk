@@ -57,6 +57,7 @@ type (
 	// during a schema applying attempt.
 	SchemaApplyError struct {
 		Result []*SchemaApply
+		Stderr string
 	}
 	// SchemaInspectParams are the parameters for the `schema inspect` command.
 	SchemaInspectParams struct {
@@ -629,9 +630,14 @@ type InvalidParamsError struct {
 func (e *InvalidParamsError) Error() string {
 	return fmt.Sprintf("atlasexec: command %q has invalid parameters: %v", e.cmd, e.msg)
 }
-func newSchemaApplyError(r []*SchemaApply) error {
-	return &SchemaApplyError{Result: r}
+func newSchemaApplyError(r []*SchemaApply, stderr string) error {
+	return &SchemaApplyError{Result: r, Stderr: stderr}
 }
 
 // Error implements the error interface.
-func (e *SchemaApplyError) Error() string { return last(e.Result).Error }
+func (e *SchemaApplyError) Error() string {
+	if e.Stderr != "" {
+		return e.Stderr
+	}
+	return last(e.Result).Error
+}
