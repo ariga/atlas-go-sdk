@@ -142,9 +142,10 @@ func TestAtlasSchema_Apply(t *testing.T) {
 	to := fmt.Sprintf("file://%s", path)
 	require.NoError(t, err)
 	_, err = c.SchemaApply(context.Background(), &atlasexec.SchemaApplyParams{
-		URL:    u,
-		To:     to,
-		DevURL: "sqlite://file?_fk=1&cache=shared&mode=memory",
+		URL:         u,
+		To:          to,
+		DevURL:      "sqlite://file?_fk=1&cache=shared&mode=memory",
+		AutoApprove: true,
 	})
 	require.NoError(t, err)
 	_, err = ce.WriteFile("schema.sql", []byte(s1+`
@@ -159,9 +160,10 @@ func TestAtlasSchema_Apply(t *testing.T) {
 	);`))
 	require.NoError(t, err)
 	_, err = c.SchemaApply(context.Background(), &atlasexec.SchemaApplyParams{
-		URL:    u,
-		To:     to,
-		DevURL: "sqlite://file?_fk=1&cache=shared&mode=memory",
+		URL:         u,
+		To:          to,
+		DevURL:      "sqlite://file?_fk=1&cache=shared&mode=memory",
+		AutoApprove: true,
 	})
 	require.NoError(t, err)
 
@@ -596,14 +598,21 @@ func TestSchema_Apply(t *testing.T) {
 		{
 			name:   "no params",
 			params: &atlasexec.SchemaApplyParams{},
-			args:   "schema apply --format {{ json . }} --auto-approve",
+			args:   "schema apply --format {{ json . }}",
 		},
 		{
 			name: "with plan",
 			params: &atlasexec.SchemaApplyParams{
 				PlanURL: "atlas://app1/plans/foo-plan",
 			},
-			args: "schema apply --format {{ json . }} --plan atlas://app1/plans/foo-plan --auto-approve",
+			args: "schema apply --format {{ json . }} --plan atlas://app1/plans/foo-plan",
+		},
+		{
+			name: "with auto-approve",
+			params: &atlasexec.SchemaApplyParams{
+				AutoApprove: true,
+			},
+			args: "schema apply --format {{ json . }} --auto-approve",
 		},
 	}
 	for _, tt := range testCases {
