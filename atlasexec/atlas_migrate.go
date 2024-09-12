@@ -46,6 +46,7 @@ type (
 	// during a migration applying attempt.
 	MigrateApplyError struct {
 		Result []*MigrateApply
+		Stderr string
 	}
 	// MigrateExecOrder define how Atlas computes and executes pending migration files to the database.
 	// See: https://atlasgo.io/versioned/apply#execution-order
@@ -569,12 +570,17 @@ func (r MigrateStatus) Amount(version string) (amount uint64, ok bool) {
 	return amount, false
 }
 
-func newMigrateApplyError(r []*MigrateApply) error {
-	return &MigrateApplyError{Result: r}
+func newMigrateApplyError(r []*MigrateApply, stderr string) error {
+	return &MigrateApplyError{Result: r, Stderr: stderr}
 }
 
 // Error implements the error interface.
-func (e *MigrateApplyError) Error() string { return last(e.Result).Error }
+func (e *MigrateApplyError) Error() string {
+	if e.Stderr != "" {
+		return e.Stderr
+	}
+	return last(e.Result).Error
+}
 
 func plural(n int) (s string) {
 	if n > 1 {

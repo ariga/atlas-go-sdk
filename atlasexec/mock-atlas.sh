@@ -7,7 +7,14 @@ fi
 
 if [[ "$TEST_STDOUT" != "" ]]; then
   echo -n $TEST_STDOUT
-  exit 0
+  if [[ "$TEST_STDERR" == "" ]]; then
+    exit 0 # No stderr
+  fi
+  # In some cases, Atlas will write the error in stderr
+  # when if the command is partially successful.
+  # eg. Run the apply commands with multiple environments.
+  >&2 echo -n $TEST_STDERR
+  exit 1
 fi
 
 TEST_STDERR="${TEST_STDERR:-Missing stderr either stdout input for the test}"
