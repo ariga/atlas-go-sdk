@@ -625,3 +625,35 @@ func TestSchema_Apply(t *testing.T) {
 		})
 	}
 }
+
+func TestSchema_ApplyEnvs(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
+	require.NoError(t, err)
+	require.NoError(t, c.SetEnv(map[string]string{
+		"TEST_ARGS": "schema apply --format {{ json . }} --env test",
+		"TEST_STDOUT": `{"Driver":"sqlite3","URL":{"Scheme":"sqlite","Host":"local-su.db"}}
+{"Driver":"sqlite3","URL":{"Scheme":"sqlite","Host":"local-pi.db"}}
+{"Driver":"sqlite3","URL":{"Scheme":"sqlite","Host":"local-bu.db"}}`,
+		"TEST_STDERR": `Abort: The plan "From" hash does not match the current state hash (passed with --from):
+
+  [31m- iHZMQ1EoarAXt/KU0KQbBljbbGs8gVqX2ZBXefePSGE=[0m[90m (plan value)[0m
+  [32m+ Cp8xCVYilZuwULkggsfJLqIQHaxYcg/IpU+kgjVUBA4=[0m[90m (current hash)[0m
+
+`,
+	}))
+	result, err := c.SchemaApply(context.Background(), &atlasexec.SchemaApplyParams{
+		Env: "test",
+	})
+	require.ErrorContains(t, err, `The plan "From" hash does not match the current state hash`)
+	require.Nil(t, result)
+
+	err2, ok := err.(*atlasexec.SchemaApplyError)
+	require.True(t, ok, "should be a SchemaApplyError, got %T", err)
+	require.Contains(t, err2.Stderr, `Abort: The plan "From" hash does not match the current state hash (passed with --from)`)
+	require.Len(t, err2.Result, 3, "should returns succeed results")
+	require.Equal(t, "sqlite://local-su.db", err2.Result[0].URL.String())
+	require.Equal(t, "sqlite://local-pi.db", err2.Result[1].URL.String())
+	require.Equal(t, "sqlite://local-bu.db", err2.Result[2].URL.String())
+}
