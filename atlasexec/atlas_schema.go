@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"ariga.io/atlas/sql/migrate"
 )
 
 type (
@@ -179,10 +181,13 @@ type (
 	}
 	// SchemaPlanFile is a JSON representation of a schema plan file.
 	SchemaPlanFile struct {
-		Name      string `json:"Name,omitempty"`      // Name of the plan.
-		FromHash  string `json:"FromHash,omitempty"`  // Hash of the 'from' realm.
-		ToHash    string `json:"ToHash,omitempty"`    // Hash of the 'to' realm.
-		Migration string `json:"Migration,omitempty"` // Migration SQL.
+		Name      string          `json:"Name,omitempty"`      // Name of the plan.
+		FromHash  string          `json:"FromHash,omitempty"`  // Hash of the 'from' realm.
+		FromDesc  string          `json:"FromDesc,omitempty"`  // Optional description of the 'from' state.
+		ToHash    string          `json:"ToHash,omitempty"`    // Hash of the 'to' realm.
+		ToDesc    string          `json:"ToDesc,omitempty"`    // Optional description of the 'to' state.
+		Migration string          `json:"Migration,omitempty"` // Migration SQL.
+		Stmts     []*migrate.Stmt `json:"Stmts,omitempty"`     // Statements in the migration (available only in the JSON output).
 		// registry only fields.
 		URL    string `json:"URL,omitempty"`    // URL of the plan in Atlas format.
 		Link   string `json:"Link,omitempty"`   // Link to the plan in the registry.
