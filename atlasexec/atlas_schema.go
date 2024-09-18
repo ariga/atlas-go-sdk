@@ -193,6 +193,15 @@ type (
 		Link   string `json:"Link,omitempty"`   // Link to the plan in the registry.
 		Status string `json:"Status,omitempty"` // Status of the plan in the registry.
 	}
+	// SchemaCleanParams are the parameters for the `schema clean` command.
+	SchemaCleanParams struct {
+		ConfigURL string
+		Env       string
+		Vars      VarArgs
+
+		URL         string // URL of the schema to clean. (required)
+		AutoApprove bool   // If true, --auto-approve is set.
+	}
 )
 
 // SchemaPush runs the 'schema push' command.
@@ -623,6 +632,31 @@ func (c *Client) SchemaPlanApprove(ctx context.Context, params *SchemaPlanApprov
 	}
 	// NOTE: This command only support one result.
 	return firstResult(jsonDecode[SchemaPlanApprove](c.runCommand(ctx, args)))
+}
+
+// SchemaClean runs the `schema clean` command.
+func (c *Client) SchemaClean(ctx context.Context, params *SchemaCleanParams) (string, error) {
+	args := []string{"schema", "clean"}
+	// Global flags
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
+	}
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
+	}
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
+	// Flags of the 'schema clean' sub-commands
+	if params.URL != "" {
+		args = append(args, "--url", params.URL)
+	} else {
+		return "", &InvalidParamsError{"schema clean", "missing required flag --url"}
+	}
+	if params.AutoApprove {
+		args = append(args, "--auto-approve")
+	}
+	return stringVal(c.runCommand(ctx, args))
 }
 
 // InvalidParamsError is an error type for invalid parameters.

@@ -626,6 +626,45 @@ func TestSchema_Apply(t *testing.T) {
 	}
 }
 
+func TestSchema_Clean(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name   string
+		params *atlasexec.SchemaCleanParams
+		args   string
+	}{
+		{
+			name: "with url",
+			params: &atlasexec.SchemaCleanParams{
+				Env: "test",
+				URL: "sqlite://app1.db",
+			},
+			args: "schema clean --env test --url sqlite://app1.db",
+		},
+		{
+			name: "with auto-approve",
+			params: &atlasexec.SchemaCleanParams{
+				URL:         "sqlite://app1.db",
+				AutoApprove: true,
+			},
+			args: "schema clean --url sqlite://app1.db --auto-approve",
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("TEST_ARGS", tt.args)
+			t.Setenv("TEST_STDOUT", "Nothing to drop")
+			result, err := c.SchemaClean(context.Background(), tt.params)
+			require.NoError(t, err)
+			require.Equal(t, "Nothing to drop", result)
+		})
+	}
+}
+
 func TestSchema_ApplyEnvs(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
