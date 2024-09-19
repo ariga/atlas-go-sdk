@@ -25,8 +25,9 @@ type (
 	}
 	// SchemaPush represents the result of a 'schema push' command.
 	SchemaPush struct {
-		URL  string
 		Link string
+		Slug string
+		URL  string
 	}
 	// SchemaApplyParams are the parameters for the `schema apply` command.
 	SchemaApplyParams struct {

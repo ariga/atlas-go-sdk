@@ -576,11 +576,12 @@ func TestSchema_Push(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("TEST_ARGS", tt.args)
-			t.Setenv("TEST_STDOUT", `{"Link":"https://gh.atlasgo.cloud/schemas/141733920810","URL":"atlas://awesome-app?tag=latest"}`)
+			t.Setenv("TEST_STDOUT", `{"Link":"https://gh.atlasgo.cloud/schemas/141733920810","Slug":"awesome-app","URL":"atlas://awesome-app?tag=latest"}`)
 			result, err := c.SchemaPush(context.Background(), tt.params)
 			require.NoError(t, err)
 			require.Equal(t, "https://gh.atlasgo.cloud/schemas/141733920810", result.Link)
 			require.Equal(t, "atlas://awesome-app?tag=latest", result.URL)
+			require.Equal(t, "awesome-app", result.Slug)
 		})
 	}
 }
