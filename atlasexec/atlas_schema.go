@@ -23,6 +23,12 @@ type (
 		Version     string // Version of the schema to push. Defaults to the current timestamp.
 		Description string // Description of the schema changes.
 	}
+	// SchemaPush represents the result of a 'schema push' command.
+	SchemaPush struct {
+		Link string
+		Slug string
+		URL  string
+	}
 	// SchemaApplyParams are the parameters for the `schema apply` command.
 	SchemaApplyParams struct {
 		ConfigURL string
@@ -205,8 +211,8 @@ type (
 )
 
 // SchemaPush runs the 'schema push' command.
-func (c *Client) SchemaPush(ctx context.Context, params *SchemaPushParams) (string, error) {
-	args := []string{"schema", "push"}
+func (c *Client) SchemaPush(ctx context.Context, params *SchemaPushParams) (*SchemaPush, error) {
+	args := []string{"schema", "push", "--format", "{{ json . }}"}
 	// Global flags
 	if params.ConfigURL != "" {
 		args = append(args, "--config", params.ConfigURL)
@@ -221,7 +227,7 @@ func (c *Client) SchemaPush(ctx context.Context, params *SchemaPushParams) (stri
 	if params.Context != nil {
 		buf, err := json.Marshal(params.Context)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		args = append(args, "--context", string(buf))
 	}
@@ -241,7 +247,7 @@ func (c *Client) SchemaPush(ctx context.Context, params *SchemaPushParams) (stri
 	if params.Repo != "" {
 		args = append(args, params.Repo)
 	}
-	return stringVal(c.runCommand(ctx, args))
+	return firstResult(jsonDecode[SchemaPush](c.runCommand(ctx, args)))
 }
 
 // SchemaApply runs the 'schema apply' command.
