@@ -212,7 +212,7 @@ type (
 
 // SchemaPush runs the 'schema push' command.
 func (c *Client) SchemaPush(ctx context.Context, params *SchemaPushParams) (*SchemaPush, error) {
-	args := []string{"schema", "push"}
+	args := []string{"schema", "push", "--format", "{{ json . }}"}
 	// Global flags
 	if params.ConfigURL != "" {
 		args = append(args, "--config", params.ConfigURL)

@@ -536,14 +536,14 @@ func TestSchema_Push(t *testing.T) {
 		{
 			name:   "no params",
 			params: &atlasexec.SchemaPushParams{},
-			args:   "schema push",
+			args:   "schema push --format {{ json . }}",
 		},
 		{
 			name: "with repo",
 			params: &atlasexec.SchemaPushParams{
 				Repo: "atlas-action",
 			},
-			args: "schema push atlas-action",
+			args: "schema push --format {{ json . }} atlas-action",
 		},
 		{
 			name: "with repo and tag",
@@ -551,7 +551,7 @@ func TestSchema_Push(t *testing.T) {
 				Repo: "atlas-action",
 				Tag:  "v1.0.0",
 			},
-			args: "schema push --tag v1.0.0 atlas-action",
+			args: "schema push --format {{ json . }} --tag v1.0.0 atlas-action",
 		},
 		{
 			name: "with repo and tag and description",
@@ -560,7 +560,7 @@ func TestSchema_Push(t *testing.T) {
 				Tag:         "v1.0.0",
 				Description: "release-v1",
 			},
-			args: "schema push --tag v1.0.0 --desc release-v1 atlas-action",
+			args: "schema push --format {{ json . }} --tag v1.0.0 --desc release-v1 atlas-action",
 		},
 		{
 			name: "with repo and tag, version and description",
@@ -570,7 +570,7 @@ func TestSchema_Push(t *testing.T) {
 				Version:     "20240829100417",
 				Description: "release-v1",
 			},
-			args: "schema push --tag v1.0.0 --version 20240829100417 --desc release-v1 atlas-action",
+			args: "schema push --format {{ json . }} --tag v1.0.0 --version 20240829100417 --desc release-v1 atlas-action",
 		},
 	}
 	for _, tt := range testCases {
