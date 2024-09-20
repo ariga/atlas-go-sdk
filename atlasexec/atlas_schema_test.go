@@ -640,12 +640,13 @@ func TestSchema_Clean(t *testing.T) {
 		args   string
 	}{
 		{
-			name: "with url",
+			name: "with env and dry-run",
 			params: &atlasexec.SchemaCleanParams{
-				Env: "test",
-				URL: "sqlite://app1.db",
+				Env:    "test",
+				URL:    "sqlite://app1.db",
+				DryRun: true,
 			},
-			args: "schema clean --env test --url sqlite://app1.db",
+			args: "schema clean --format {{ json . }} --env test --url sqlite://app1.db --dry-run",
 		},
 		{
 			name: "with auto-approve",
@@ -653,16 +654,16 @@ func TestSchema_Clean(t *testing.T) {
 				URL:         "sqlite://app1.db",
 				AutoApprove: true,
 			},
-			args: "schema clean --url sqlite://app1.db --auto-approve",
+			args: "schema clean --format {{ json . }} --url sqlite://app1.db --auto-approve",
 		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("TEST_ARGS", tt.args)
-			t.Setenv("TEST_STDOUT", "Nothing to drop")
+			t.Setenv("TEST_STDOUT", "{\"Start\":\"2024-09-20T14:51:40.439499+07:00\",\"End\":\"2024-09-20T14:51:40.439533+07:00\",\"Applied\":{\"Name\":\"20240920075140.sql\",\"Version\":\"20240920075140\",\"Start\":\"2024-09-20T14:51:40.43952+07:00\",\"End\":\"2024-09-20T14:51:40.439533+07:00\",\"Applied\":[\"PRAGMA foreign_keys = off;\",\"DROP TABLE `t1`;\", \"PRAGMA foreign_keys = on;\"]}}")
 			result, err := c.SchemaClean(context.Background(), tt.params)
 			require.NoError(t, err)
-			require.Equal(t, "Nothing to drop", result)
+			require.Equal(t, "20240920075140.sql", result.Applied.Name)
 		})
 	}
 }

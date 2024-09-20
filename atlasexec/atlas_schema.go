@@ -206,7 +206,16 @@ type (
 		Vars      VarArgs
 
 		URL         string // URL of the schema to clean. (required)
+		DryRun      bool   // If true, --dry-run is set.
 		AutoApprove bool   // If true, --auto-approve is set.
+	}
+	// SchemaClean represents the result of a 'schema clean' command.
+	SchemaClean struct {
+		Env
+		Start   time.Time    `json:"Start,omitempty"`   // When clean started.
+		End     time.Time    `json:"End,omitempty"`     // When clean ended.
+		Applied *AppliedFile `json:"Applied,omitempty"` // Applied migration file.
+		Error   string       `json:"Error,omitempty"`   // Any error that occurred during execution.
 	}
 )
 
@@ -641,8 +650,8 @@ func (c *Client) SchemaPlanApprove(ctx context.Context, params *SchemaPlanApprov
 }
 
 // SchemaClean runs the `schema clean` command.
-func (c *Client) SchemaClean(ctx context.Context, params *SchemaCleanParams) (string, error) {
-	args := []string{"schema", "clean"}
+func (c *Client) SchemaClean(ctx context.Context, params *SchemaCleanParams) (*SchemaClean, error) {
+	args := []string{"schema", "clean", "--format", "{{ json . }}"}
 	// Global flags
 	if params.ConfigURL != "" {
 		args = append(args, "--config", params.ConfigURL)
@@ -657,12 +666,15 @@ func (c *Client) SchemaClean(ctx context.Context, params *SchemaCleanParams) (st
 	if params.URL != "" {
 		args = append(args, "--url", params.URL)
 	} else {
-		return "", &InvalidParamsError{"schema clean", "missing required flag --url"}
+		return nil, &InvalidParamsError{"schema clean", "missing required flag --url"}
 	}
-	if params.AutoApprove {
+	switch {
+	case params.DryRun:
+		args = append(args, "--dry-run")
+	case params.AutoApprove:
 		args = append(args, "--auto-approve")
 	}
-	return stringVal(c.runCommand(ctx, args))
+	return firstResult(jsonDecode[SchemaClean](c.runCommand(ctx, args)))
 }
 
 // InvalidParamsError is an error type for invalid parameters.
