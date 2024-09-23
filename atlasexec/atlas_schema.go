@@ -18,7 +18,7 @@ type (
 		Context   *RunContext
 		DevURL    string
 
-		Repo        string // Repository name.
+		Name        string // Name of the schema to push.
 		Tag         string // Tag to push the schema with
 		Version     string // Version of the schema to push. Defaults to the current timestamp.
 		Description string // Description of the schema changes.
@@ -253,8 +253,8 @@ func (c *Client) SchemaPush(ctx context.Context, params *SchemaPushParams) (*Sch
 	if params.Description != "" {
 		args = append(args, "--desc", params.Description)
 	}
-	if params.Repo != "" {
-		args = append(args, params.Repo)
+	if params.Name != "" {
+		args = append(args, params.Name)
 	}
 	return firstResult(jsonDecode[SchemaPush](c.runCommand(ctx, args)))
 }
