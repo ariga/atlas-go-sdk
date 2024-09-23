@@ -665,8 +665,6 @@ func (c *Client) SchemaClean(ctx context.Context, params *SchemaCleanParams) (*S
 	// Flags of the 'schema clean' sub-commands
 	if params.URL != "" {
 		args = append(args, "--url", params.URL)
-	} else {
-		return nil, &InvalidParamsError{"schema clean", "missing required flag --url"}
 	}
 	switch {
 	case params.DryRun:
