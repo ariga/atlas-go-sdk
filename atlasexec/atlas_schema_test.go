@@ -541,14 +541,14 @@ func TestSchema_Push(t *testing.T) {
 		{
 			name: "with repo",
 			params: &atlasexec.SchemaPushParams{
-				Repo: "atlas-action",
+				Name: "atlas-action",
 			},
 			args: "schema push --format {{ json . }} atlas-action",
 		},
 		{
 			name: "with repo and tag",
 			params: &atlasexec.SchemaPushParams{
-				Repo: "atlas-action",
+				Name: "atlas-action",
 				Tag:  "v1.0.0",
 			},
 			args: "schema push --format {{ json . }} --tag v1.0.0 atlas-action",
@@ -556,7 +556,7 @@ func TestSchema_Push(t *testing.T) {
 		{
 			name: "with repo and tag and description",
 			params: &atlasexec.SchemaPushParams{
-				Repo:        "atlas-action",
+				Name:        "atlas-action",
 				Tag:         "v1.0.0",
 				Description: "release-v1",
 			},
@@ -565,7 +565,7 @@ func TestSchema_Push(t *testing.T) {
 		{
 			name: "with repo and tag, version and description",
 			params: &atlasexec.SchemaPushParams{
-				Repo:        "atlas-action",
+				Name:        "atlas-action",
 				Tag:         "v1.0.0",
 				Version:     "20240829100417",
 				Description: "release-v1",
