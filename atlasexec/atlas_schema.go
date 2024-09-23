@@ -18,7 +18,7 @@ type (
 		Context   *RunContext
 		DevURL    string
 
-		Name        string // Name of the schema to push.
+		Name        string // Name of the schema (repo) to push to.
 		Tag         string // Tag to push the schema with
 		Version     string // Version of the schema to push. Defaults to the current timestamp.
 		Description string // Description of the schema changes.
