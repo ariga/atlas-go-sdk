@@ -390,6 +390,18 @@ func jsonDecodeErr[T any](fn func([]*T, string) error) func(io.Reader, error) ([
 	}
 }
 
+// repeatFlag repeats the flag for each value.
+func repeatFlag(flag string, values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(values)*2)
+	for _, v := range values {
+		out = append(out, flag, v)
+	}
+	return out
+}
+
 func listString(args []string) string {
 	return strings.Join(args, ",")
 }

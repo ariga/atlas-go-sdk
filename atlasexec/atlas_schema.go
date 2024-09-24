@@ -18,10 +18,11 @@ type (
 		Context   *RunContext
 		DevURL    string
 
-		Name        string // Name of the schema (repo) to push to.
-		Tag         string // Tag to push the schema with
-		Version     string // Version of the schema to push. Defaults to the current timestamp.
-		Description string // Description of the schema changes.
+		URL         []string // Desired schema URL(s) to push
+		Name        string   // Name of the schema (repo) to push to.
+		Tag         string   // Tag to push the schema with
+		Version     string   // Version of the schema to push. Defaults to the current timestamp.
+		Description string   // Description of the schema changes.
 	}
 	// SchemaPush represents the result of a 'schema push' command.
 	SchemaPush struct {
@@ -37,7 +38,7 @@ type (
 		DevURL    string
 
 		URL         string
-		To          string
+		To          string // TODO: change to []string
 		TxMode      string
 		Exclude     []string
 		Schema      []string
@@ -241,6 +242,7 @@ func (c *Client) SchemaPush(ctx context.Context, params *SchemaPushParams) (*Sch
 		args = append(args, "--context", string(buf))
 	}
 	// Flags of the 'schema push' sub-commands
+	args = append(args, repeatFlag("--url", params.URL)...)
 	if params.DevURL != "" {
 		args = append(args, "--dev-url", params.DevURL)
 	}

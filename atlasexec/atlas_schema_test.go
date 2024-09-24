@@ -539,6 +539,20 @@ func TestSchema_Push(t *testing.T) {
 			args:   "schema push --format {{ json . }}",
 		},
 		{
+			name: "push with 1 URL",
+			params: &atlasexec.SchemaPushParams{
+				URL: []string{"file://foo.hcl"},
+			},
+			args: "schema push --format {{ json . }} --url file://foo.hcl",
+		},
+		{
+			name: "push with 2 URLs",
+			params: &atlasexec.SchemaPushParams{
+				URL: []string{"file://foo.hcl", "file://bupisu.hcl"},
+			},
+			args: "schema push --format {{ json . }} --url file://foo.hcl --url file://bupisu.hcl",
+		},
+		{
 			name: "with repo",
 			params: &atlasexec.SchemaPushParams{
 				Name: "atlas-action",
