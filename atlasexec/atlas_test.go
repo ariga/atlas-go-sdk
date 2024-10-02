@@ -83,6 +83,25 @@ func TestVersion(t *testing.T) {
 	}
 }
 
+func TestWhoAmI(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
+	require.NoError(t, err)
+	t.Setenv("TEST_ARGS", "whoami --format {{ json . }}")
+	// Test success.
+	t.Setenv("TEST_STDOUT", `{"Org":"boring"}`)
+	v, err := c.WhoAmI(context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, v)
+	require.Equal(t, "boring", v.Org)
+	// Test error.
+	t.Setenv("TEST_STDOUT", "")
+	t.Setenv("TEST_STDERR", `Error: command requires 'atlas login'`)
+	_, err = c.WhoAmI(context.Background())
+	require.EqualError(t, err, "Error: command requires 'atlas login'")
+}
+
 func TestVars2(t *testing.T) {
 	var vars = atlasexec.Vars2{
 		"key1": "value1",
