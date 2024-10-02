@@ -83,6 +83,7 @@ const (
 // SCMType values.
 const (
 	SCMTypeGithub SCMType = "GITHUB"
+	SCMTypeGitlab SCMType = "GITLAB"
 )
 
 // ExecutionOrder values.
