@@ -27,6 +27,10 @@ type (
 	LoginParams struct {
 		Token string
 	}
+	// WhoAmI contains the result of an 'atlas whoami' run.
+	WhoAmI struct {
+		Org string `json:"Org,omitempty"`
+	}
 	// Version contains the result of an 'atlas version' run.
 	Version struct {
 		Version string `json:"Version"`
@@ -155,6 +159,13 @@ func (c *Client) Login(ctx context.Context, params *LoginParams) error {
 func (c *Client) Logout(ctx context.Context) error {
 	_, err := c.runCommand(ctx, []string{"logout"})
 	return err
+}
+
+// WhoAmI runs the 'whoami' command.
+func (c *Client) WhoAmI(ctx context.Context) (*WhoAmI, error) {
+	return firstResult(jsonDecode[WhoAmI](c.runCommand(ctx, []string{
+		"whoami", "--format", "{{ json . }}",
+	})))
 }
 
 var reVersion = regexp.MustCompile(`^atlas version v(\d+\.\d+.\d+)-?([a-z0-9]*)?`)
