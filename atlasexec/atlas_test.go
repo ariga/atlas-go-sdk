@@ -99,7 +99,8 @@ func TestWhoAmI(t *testing.T) {
 	t.Setenv("TEST_STDOUT", "")
 	t.Setenv("TEST_STDERR", `Error: command requires 'atlas login'`)
 	_, err = c.WhoAmI(context.Background())
-	require.EqualError(t, err, "Error: command requires 'atlas login'")
+	require.EqualError(t, err, "command requires 'atlas login'")
+	require.ErrorIs(t, err, atlasexec.ErrRequireLogin)
 }
 
 func TestVars2(t *testing.T) {

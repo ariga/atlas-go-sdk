@@ -243,6 +243,10 @@ var defaultEnvs = map[string]string{
 	"ATLAS_NO_UPGRADE_SUGGESTIONS": "1",
 }
 
+// ErrRequireLogin is returned when a command requires the user to be logged in.
+// It exists here to be shared between the different packages that require login.
+var ErrRequireLogin = errors.New("command requires 'atlas login'")
+
 // runCommand runs the given command and returns its output.
 func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, error) {
 	var stdout, stderr bytes.Buffer
@@ -260,6 +264,11 @@ func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, erro
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
+		e := strings.TrimSpace(stderr.String())
+		// Explicit check the stderr for the login error.
+		if e == "Error: command requires 'atlas login'" {
+			return nil, ErrRequireLogin
+		}
 		return nil, &Error{
 			err:    err,
 			Stderr: strings.TrimSpace(stderr.String()),
