@@ -98,9 +98,10 @@ type (
 		Context   *RunContext
 		DevURL    string
 
-		From, To []string
-		Repo     string
-		Name     string
+		From, To   []string
+		Repo       string
+		Name       string
+		Directives []string
 		// The below are mutually exclusive and can be replaced
 		// with the 'schema plan' sub-commands instead.
 		DryRun     bool // If false, --auto-approve is set.
@@ -417,6 +418,9 @@ func (c *Client) SchemaPlan(ctx context.Context, params *SchemaPlanParams) (*Sch
 		args = append(args, "--dry-run")
 	} else {
 		args = append(args, "--auto-approve")
+	}
+	for _, d := range params.Directives {
+		args = append(args, "--directive", d)
 	}
 	// NOTE: This command only support one result.
 	return firstResult(jsonDecode[SchemaPlan](c.runCommand(ctx, args)))
