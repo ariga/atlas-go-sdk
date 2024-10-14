@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"ariga.io/atlas/sql/migrate"
@@ -420,7 +421,7 @@ func (c *Client) SchemaPlan(ctx context.Context, params *SchemaPlanParams) (*Sch
 		args = append(args, "--auto-approve")
 	}
 	for _, d := range params.Directives {
-		args = append(args, "--directive", d)
+		args = append(args, "--directive", strconv.Quote(d))
 	}
 	// NOTE: This command only support one result.
 	return firstResult(jsonDecode[SchemaPlan](c.runCommand(ctx, args)))
