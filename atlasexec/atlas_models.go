@@ -1,6 +1,7 @@
 package atlasexec
 
 import (
+	"errors"
 	"time"
 
 	"ariga.io/atlas/sql/sqlcheck"
@@ -128,4 +129,15 @@ func (r *SummaryReport) DiagnosticsCount() int {
 		}
 	}
 	return n
+}
+
+// Errors returns the errors in the summary report, if exists.
+func (r *SummaryReport) Errors() []error {
+	var errs []error
+	for _, f := range r.Files {
+		if f.Error != "" {
+			errs = append(errs, errors.New(f.Error))
+		}
+	}
+	return errs
 }
