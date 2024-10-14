@@ -254,9 +254,9 @@ func TestSchema_Plan(t *testing.T) {
 			params: &atlasexec.SchemaPlanParams{
 				From:       []string{"1", "2"},
 				To:         []string{"2", "3"},
-				Directives: []string{"atlas:nolint", "\"atlas:txmode none\""},
+				Directives: []string{"atlas:nolint", "atlas:txmode none"},
 			},
-			args: `schema plan --format {{ json . }} --from 1,2 --to 2,3 --auto-approve --directive atlas:nolint --directive "atlas:txmode none"`,
+			args: `schema plan --format {{ json . }} --from 1,2 --to 2,3 --auto-approve --directive "atlas:nolint" --directive "atlas:txmode none"`,
 		},
 		{
 			name: "with config",
