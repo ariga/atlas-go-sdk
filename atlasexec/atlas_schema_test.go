@@ -569,6 +569,14 @@ func TestSchema_Push(t *testing.T) {
 			args: "schema push --format {{ json . }} atlas-action",
 		},
 		{
+			name: "with repo and schemas",
+			params: &atlasexec.SchemaPushParams{
+				Name:   "atlas-action",
+				Schema: []string{"public", "bupisu"},
+			},
+			args: "schema push --format {{ json . }} --schema public,bupisu atlas-action",
+		},
+		{
 			name: "with repo and tag",
 			params: &atlasexec.SchemaPushParams{
 				Name: "atlas-action",
