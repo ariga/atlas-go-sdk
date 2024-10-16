@@ -250,6 +250,15 @@ func TestSchema_Plan(t *testing.T) {
 			args: `schema plan --format {{ json . }} --from 1,2 --to 2,3 --auto-approve`,
 		},
 		{
+			name: "with from to and schema",
+			params: &atlasexec.SchemaPlanParams{
+				From:   []string{"1", "2"},
+				To:     []string{"2", "3"},
+				Schema: []string{"public", "bupisu"},
+			},
+			args: `schema plan --format {{ json . }} --schema public,bupisu --from 1,2 --to 2,3 --auto-approve`,
+		},
+		{
 			name: "with from to and directives",
 			params: &atlasexec.SchemaPlanParams{
 				From:       []string{"1", "2"},
@@ -333,6 +342,15 @@ func TestSchema_PlanPush(t *testing.T) {
 			args: "schema plan push --format {{ json . }} --file file://plan.hcl --repo testing-repo --auto-approve",
 		},
 		{
+			name: "with auto-approve and schema",
+			params: &atlasexec.SchemaPlanPushParams{
+				Repo:   "testing-repo",
+				File:   "file://plan.hcl",
+				Schema: []string{"public", "bupisu"},
+			},
+			args: "schema plan push --format {{ json . }} --schema public,bupisu --file file://plan.hcl --repo testing-repo --auto-approve",
+		},
+		{
 			name: "with pending status",
 			params: &atlasexec.SchemaPlanPushParams{
 				Pending: true,
@@ -378,6 +396,14 @@ func TestSchema_PlanLint(t *testing.T) {
 			},
 			args: "schema plan lint --format {{ json . }} --file file://plan.hcl --auto-approve",
 		},
+		{
+			name: "with file and schema",
+			params: &atlasexec.SchemaPlanLintParams{
+				File:   "file://plan.hcl",
+				Schema: []string{"public", "bupisu"},
+			},
+			args: "schema plan lint --format {{ json . }} --schema public,bupisu --file file://plan.hcl --auto-approve",
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -415,6 +441,14 @@ func TestSchema_PlanValidate(t *testing.T) {
 				File: "file://plan.hcl",
 			},
 			args: "schema plan validate --file file://plan.hcl --auto-approve",
+		},
+		{
+			name: "with file and schema",
+			params: &atlasexec.SchemaPlanValidateParams{
+				File:   "file://plan.hcl",
+				Schema: []string{"public", "bupisu"},
+			},
+			args: "schema plan validate --schema public,bupisu --file file://plan.hcl --auto-approve",
 		},
 	}
 	for _, tt := range testCases {
@@ -510,6 +544,15 @@ func TestSchema_PlanList(t *testing.T) {
 				From: []string{"env://url"},
 			},
 			args: "schema plan list --format {{ json . }} --from env://url --repo atlas://testing-repo --auto-approve",
+		},
+		{
+			name: "with repo and schema",
+			params: &atlasexec.SchemaPlanListParams{
+				Repo:   "atlas://testing-repo",
+				From:   []string{"env://url"},
+				Schema: []string{"public", "bupisu"},
+			},
+			args: "schema plan list --format {{ json . }} --schema public,bupisu --from env://url --repo atlas://testing-repo --auto-approve",
 		},
 		{
 			name: "with repo and pending",
