@@ -20,6 +20,7 @@ type (
 		DevURL    string
 
 		URL         []string // Desired schema URL(s) to push
+		Schema      []string // If set, only the specified schemas are pushed.
 		Name        string   // Name of the schema (repo) to push to.
 		Tag         string   // Tag to push the schema with
 		Version     string   // Version of the schema to push. Defaults to the current timestamp.
@@ -98,6 +99,7 @@ type (
 		Vars      VarArgs
 		Context   *RunContext
 		DevURL    string
+		Schema    []string
 
 		From, To   []string
 		Repo       string
@@ -116,6 +118,7 @@ type (
 		Vars      VarArgs
 		Context   *RunContext
 		DevURL    string
+		Schema    []string
 
 		From, To []string
 		Repo     string
@@ -128,6 +131,7 @@ type (
 		Vars      VarArgs
 		Context   *RunContext
 		DevURL    string
+		Schema    []string
 
 		From, To []string
 		Repo     string
@@ -148,6 +152,7 @@ type (
 		Vars      VarArgs
 		Context   *RunContext
 		DevURL    string
+		Schema    []string
 
 		From, To []string
 		Repo     string
@@ -160,6 +165,7 @@ type (
 		Vars      VarArgs
 		Context   *RunContext
 		DevURL    string
+		Schema    []string
 
 		From, To []string
 		Repo     string
@@ -247,6 +253,9 @@ func (c *Client) SchemaPush(ctx context.Context, params *SchemaPushParams) (*Sch
 	args = append(args, repeatFlag("--url", params.URL)...)
 	if params.DevURL != "" {
 		args = append(args, "--dev-url", params.DevURL)
+	}
+	if len(params.Schema) > 0 {
+		args = append(args, "--schema", listString(params.Schema))
 	}
 	if params.Tag != "" {
 		args = append(args, "--tag", params.Tag)
@@ -394,6 +403,9 @@ func (c *Client) SchemaPlan(ctx context.Context, params *SchemaPlanParams) (*Sch
 	if params.DevURL != "" {
 		args = append(args, "--dev-url", params.DevURL)
 	}
+	if len(params.Schema) > 0 {
+		args = append(args, "--schema", listString(params.Schema))
+	}
 	if len(params.From) > 0 {
 		args = append(args, "--from", listString(params.From))
 	}
@@ -452,6 +464,9 @@ func (c *Client) SchemaPlanList(ctx context.Context, params *SchemaPlanListParam
 	if params.DevURL != "" {
 		args = append(args, "--dev-url", params.DevURL)
 	}
+	if len(params.Schema) > 0 {
+		args = append(args, "--schema", listString(params.Schema))
+	}
 	if len(params.From) > 0 {
 		args = append(args, "--from", listString(params.From))
 	}
@@ -497,6 +512,9 @@ func (c *Client) SchemaPlanPush(ctx context.Context, params *SchemaPlanPushParam
 	// Flags of the 'schema plan push' sub-commands
 	if params.DevURL != "" {
 		args = append(args, "--dev-url", params.DevURL)
+	}
+	if len(params.Schema) > 0 {
+		args = append(args, "--schema", listString(params.Schema))
 	}
 	if len(params.From) > 0 {
 		args = append(args, "--from", listString(params.From))
@@ -567,6 +585,9 @@ func (c *Client) SchemaPlanLint(ctx context.Context, params *SchemaPlanLintParam
 	if params.DevURL != "" {
 		args = append(args, "--dev-url", params.DevURL)
 	}
+	if len(params.Schema) > 0 {
+		args = append(args, "--schema", listString(params.Schema))
+	}
 	if len(params.From) > 0 {
 		args = append(args, "--from", listString(params.From))
 	}
@@ -610,6 +631,9 @@ func (c *Client) SchemaPlanValidate(ctx context.Context, params *SchemaPlanValid
 	// Flags of the 'schema plan validate' sub-commands
 	if params.DevURL != "" {
 		args = append(args, "--dev-url", params.DevURL)
+	}
+	if len(params.Schema) > 0 {
+		args = append(args, "--schema", listString(params.Schema))
 	}
 	if len(params.From) > 0 {
 		args = append(args, "--from", listString(params.From))
