@@ -82,12 +82,15 @@ const (
 	TriggerTypeTerraform    TriggerType = "TERRAFORM"
 	TriggerTypeGithubAction TriggerType = "GITHUB_ACTION"
 	TriggerTypeCircleCIOrb  TriggerType = "CIRCLECI_ORB"
+	TriggerTypeGitlab       TriggerType = "GITLAB"
+	TriggerTypeBitbucket    TriggerType = "BITBUCKET"
 )
 
 // SCMType values.
 const (
-	SCMTypeGithub SCMType = "GITHUB"
-	SCMTypeGitlab SCMType = "GITLAB"
+	SCMTypeGithub    SCMType = "GITHUB"
+	SCMTypeGitlab    SCMType = "GITLAB"
+	SCMTypeBitbucket SCMType = "BITBUCKET"
 )
 
 // ExecutionOrder values.
