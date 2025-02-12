@@ -89,8 +89,9 @@ type (
 		Vars      VarArgs
 		DevURL    string
 
-		URL string
-		Run string
+		URL   string
+		Run   string
+		Paths []string
 	}
 	// SchemaPlanParams are the parameters for the `schema plan` command.
 	SchemaPlanParams struct {
@@ -374,6 +375,9 @@ func (c *Client) SchemaTest(ctx context.Context, params *SchemaTestParams) (stri
 	}
 	if params.Vars != nil {
 		args = append(args, params.Vars.AsArgs()...)
+	}
+	if len(params.Paths) > 0 {
+		args = append(args, params.Paths...)
 	}
 	return stringVal(c.runCommand(ctx, args))
 }
