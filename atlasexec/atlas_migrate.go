@@ -127,6 +127,7 @@ type (
 		DirFormat       string
 		Run             string
 		RevisionsSchema string
+		Paths           []string
 	}
 	// MigrateStatusParams are the parameters for the `migrate status` command.
 	MigrateStatusParams struct {
@@ -332,6 +333,9 @@ func (c *Client) MigrateTest(ctx context.Context, params *MigrateTestParams) (st
 	}
 	if params.Vars != nil {
 		args = append(args, params.Vars.AsArgs()...)
+	}
+	if len(params.Paths) > 0 {
+		args = append(args, params.Paths...)
 	}
 	return stringVal(c.runCommand(ctx, args))
 }

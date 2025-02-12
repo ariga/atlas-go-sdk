@@ -61,6 +61,15 @@ func TestSchema_Test(t *testing.T) {
 			args:   "schema test --run example",
 			stdout: "test result",
 		},
+		{
+			name: "with run and paths",
+			params: &atlasexec.SchemaTestParams{
+				Run:   "example",
+				Paths: []string{"./foo", "./bar"},
+			},
+			args:   "schema test --run example ./foo ./bar",
+			stdout: "test result",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("TEST_ARGS", tt.args)

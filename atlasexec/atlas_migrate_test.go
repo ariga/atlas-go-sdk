@@ -248,6 +248,15 @@ func TestMigrate_Test(t *testing.T) {
 			stdout: "test result",
 		},
 		{
+			name: "with run and paths",
+			params: &atlasexec.MigrateTestParams{
+				Run:   "example",
+				Paths: []string{"./foo", "./bar"},
+			},
+			args:   "migrate test --run example ./foo ./bar",
+			stdout: "test result",
+		},
+		{
 			name: "with revisions-schema",
 			params: &atlasexec.MigrateTestParams{
 				RevisionsSchema: "schema",
