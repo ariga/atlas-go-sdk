@@ -158,7 +158,7 @@ type (
 		Count     int         `json:"Count,omitempty"`     // Count of applied statements of the last revision
 		Total     int         `json:"Total,omitempty"`     // Total statements of the last migration
 		Status    string      `json:"Status,omitempty"`    // Status of migration (OK, PENDING)
-		Error     string      `json:"Error,omitempty"`     // Last Error tha`t occurred
+		Error     string      `json:"Error,omitempty"`     // Last Error that occurred
 		SQL       string      `json:"SQL,omitempty"`       // SQL that caused the last Error
 	}
 )

@@ -574,25 +574,20 @@ func TestAtlasMigrate_Push(t *testing.T) {
 func TestMigrateHash(t *testing.T) {
 	td := t.TempDir()
 	require.NoError(t, os.Mkdir(fmt.Sprintf("%s/migrations", td), 0777))
-	require.NoError(t,
-		os.WriteFile(fmt.Sprintf("%s/migrations/1.sql", td), []byte(`create table t (c int not null)`), 0666),
-	)
+	require.NoError(t, os.WriteFile(fmt.Sprintf("%s/migrations/1.sql", td), []byte(`create table t (c int not null)`), 0666))
 	c, err := atlasexec.NewClient(td, "atlas")
 	require.NoError(t, err)
-	_, err = c.SchemaInspect(context.Background(), &atlasexec.SchemaInspectParams{
-		DevURL: "sqlite://file?mode=memory",
-		URL:    fmt.Sprintf("file://%s/migrations", td),
-	})
-	require.ErrorContains(t, err, "checksum file not found")
-	require.NoError(t,
-		c.MigrateHash(context.Background(), &atlasexec.MigrateHashParams{}),
-	)
+	inspect := func() error {
+		_, err = c.SchemaInspect(context.Background(), &atlasexec.SchemaInspectParams{
+			DevURL: "sqlite://file?mode=memory",
+			URL:    fmt.Sprintf("file://%s/migrations", td),
+		})
+		return err
+	}
+	require.ErrorContains(t, inspect(), "checksum file not found")
+	require.NoError(t, c.MigrateHash(context.Background(), &atlasexec.MigrateHashParams{}))
 	require.FileExists(t, fmt.Sprintf("%s/migrations/atlas.sum", td))
-	_, err = c.SchemaInspect(context.Background(), &atlasexec.SchemaInspectParams{
-		DevURL: "sqlite://file?mode=memory",
-		URL:    fmt.Sprintf("file://%s/migrations", td),
-	})
-	require.NoError(t, err)
+	require.NoError(t, inspect())
 }
 
 func TestAtlasMigrate_Lint(t *testing.T) {
