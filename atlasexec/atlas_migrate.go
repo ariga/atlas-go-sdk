@@ -392,7 +392,7 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 	return firstResult(jsonDecode[SummaryReport](r, err))
 }
 
-// MigrateHash runs the 'migrate has' command.
+// MigrateHash runs the 'migrate hash' command.
 func (c *Client) MigrateHash(ctx context.Context, params *MigrateHashParams) error {
 	args := []string{"migrate", "hash"}
 	if params.Env != "" {
