@@ -115,6 +115,15 @@ type (
 		Base   string
 		Web    bool
 	}
+	// MigrateHashParams are the parameters for the `migrate hash` command.
+	MigrateHashParams struct {
+		ConfigURL string
+		Env       string
+		Vars      VarArgs
+
+		DirURL    string
+		DirFormat string
+	}
 	// MigrateTestParams are the parameters for the `migrate test` command.
 	MigrateTestParams struct {
 		ConfigURL string
@@ -149,7 +158,7 @@ type (
 		Count     int         `json:"Count,omitempty"`     // Count of applied statements of the last revision
 		Total     int         `json:"Total,omitempty"`     // Total statements of the last migration
 		Status    string      `json:"Status,omitempty"`    // Status of migration (OK, PENDING)
-		Error     string      `json:"Error,omitempty"`     // Last Error that occurred
+		Error     string      `json:"Error,omitempty"`     // Last Error tha`t occurred
 		SQL       string      `json:"SQL,omitempty"`       // SQL that caused the last Error
 	}
 )
@@ -381,6 +390,28 @@ func (c *Client) MigrateLint(ctx context.Context, params *MigrateLintParams) (*S
 	}
 	// NOTE: This command only support one result.
 	return firstResult(jsonDecode[SummaryReport](r, err))
+}
+
+// MigrateHash runs the 'migrate has' command.
+func (c *Client) MigrateHash(ctx context.Context, params *MigrateHashParams) error {
+	args := []string{"migrate", "hash"}
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
+	}
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
+	}
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
+	if params.DirURL != "" {
+		args = append(args, "--dir", params.DirURL)
+	}
+	if params.DirFormat != "" {
+		args = append(args, "--dir-format", params.DirFormat)
+	}
+	_, err := c.runCommand(ctx, args)
+	return err
 }
 
 // MigrateLintError runs the 'migrate lint' command, the output is written to params.Writer and reports
