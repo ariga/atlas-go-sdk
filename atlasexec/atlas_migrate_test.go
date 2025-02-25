@@ -683,6 +683,19 @@ func TestAtlasMigrate_Lint(t *testing.T) {
 		require.ErrorContains(t, err, "--latest, --git-base, and --base are mutually exclusive")
 		require.Nil(t, summary)
 	})
+	t.Run("lint uses --git-base and --git-dir", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		got, err := c.MigrateLint(context.Background(), &atlasexec.MigrateLintParams{
+			DevURL: "sqlite://file?mode=memory",
+			DirURL: "file://testdata/migrations",
+			GitBase: "master",
+			GitDir:  ".",
+		})
+		require.NoError(t, err)
+		// No diff between master and current branch in the testdata/migrations
+		require.Equal(t, 0, len(got.Files))
+	})
 }
 
 func TestAtlasMigrate_LintWithLogin(t *testing.T) {

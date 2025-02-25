@@ -109,11 +109,13 @@ type (
 		Format    string
 		DevURL    string
 
-		DirURL string
-		Latest uint64
-		Writer io.Writer
-		Base   string
-		Web    bool
+		DirURL  string
+		Latest  uint64
+		Writer  io.Writer
+		Base    string
+		GitBase string
+		GitDir  string
+		Web     bool
 	}
 	// MigrateHashParams are the parameters for the `migrate hash` command.
 	MigrateHashParams struct {
@@ -478,6 +480,12 @@ func (p *MigrateLintParams) AsArgs() ([]string, error) {
 	}
 	if p.Latest > 0 {
 		args = append(args, "--latest", strconv.FormatUint(p.Latest, 10))
+	}
+	if p.GitBase != "" {
+		args = append(args, "--git-base", p.GitBase)
+	}
+	if p.GitDir != "" {
+		args = append(args, "--git-dir", p.GitDir)
 	}
 	if p.Vars != nil {
 		args = append(args, p.Vars.AsArgs()...)
