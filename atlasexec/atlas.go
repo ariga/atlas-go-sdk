@@ -27,6 +27,12 @@ type (
 	LoginParams struct {
 		Token string
 	}
+	// WhoAmIParams are the parameters for the `whoami` command
+	WhoAmIParams struct {
+		ConfigURL string
+		Env       string
+		Vars      VarArgs
+	}
 	// WhoAmI contains the result of an 'atlas whoami' run.
 	WhoAmI struct {
 		Org string `json:"Org,omitempty"`
@@ -165,10 +171,19 @@ func (c *Client) Logout(ctx context.Context) error {
 }
 
 // WhoAmI runs the 'whoami' command.
-func (c *Client) WhoAmI(ctx context.Context) (*WhoAmI, error) {
-	return firstResult(jsonDecode[WhoAmI](c.runCommand(ctx, []string{
-		"whoami", "--format", "{{ json . }}",
-	})))
+func (c *Client) WhoAmI(ctx context.Context, params *WhoAmIParams) (*WhoAmI, error) {
+	args := []string{"whoami", "--format", "{{ json . }}"}
+	// Global flags
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
+	}
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
+	}
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
+	return firstResult(jsonDecode[WhoAmI](c.runCommand(ctx, args)))
 }
 
 var reVersion = regexp.MustCompile(`^atlas version v(\d+\.\d+.\d+)-?([a-z0-9]*)?`)

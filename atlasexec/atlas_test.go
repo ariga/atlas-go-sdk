@@ -91,16 +91,28 @@ func TestWhoAmI(t *testing.T) {
 	t.Setenv("TEST_ARGS", "whoami --format {{ json . }}")
 	// Test success.
 	t.Setenv("TEST_STDOUT", `{"Org":"boring"}`)
-	v, err := c.WhoAmI(context.Background())
+	v, err := c.WhoAmI(context.Background(), &atlasexec.WhoAmIParams{})
 	require.NoError(t, err)
 	require.NotNil(t, v)
 	require.Equal(t, "boring", v.Org)
 	// Test error.
 	t.Setenv("TEST_STDOUT", "")
 	t.Setenv("TEST_STDERR", `Error: command requires 'atlas login'`)
-	_, err = c.WhoAmI(context.Background())
+	_, err = c.WhoAmI(context.Background(), &atlasexec.WhoAmIParams{})
 	require.EqualError(t, err, "command requires 'atlas login'")
 	require.ErrorIs(t, err, atlasexec.ErrRequireLogin)
+	// Test config url
+	t.Setenv("TEST_ARGS", "whoami --format {{ json . }} --config file://config.hcl --env local --var foo=bar")
+	t.Setenv("TEST_STDOUT", `{"Org":"boring"}`)
+	t.Setenv("TEST_STDERR", "")
+	v, err = c.WhoAmI(context.Background(), &atlasexec.WhoAmIParams{
+		ConfigURL: "file://config.hcl",
+		Env:       "local",
+		Vars:      atlasexec.Vars{"foo": "bar"},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, v)
+	require.Equal(t, "boring", v.Org)
 }
 
 func TestVars2(t *testing.T) {
