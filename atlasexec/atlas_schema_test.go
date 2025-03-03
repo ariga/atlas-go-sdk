@@ -782,3 +782,80 @@ func TestSchema_ApplyEnvs(t *testing.T) {
 	require.Equal(t, "sqlite://local-pi.db", err2.Result[1].URL.String())
 	require.Equal(t, "sqlite://local-bu.db", err2.Result[2].URL.String())
 }
+
+func TestSchema_Lint(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
+	require.NoError(t, err)
+
+	for _, tt := range []struct {
+		name   string
+		params *atlasexec.SchemaLintParams
+		args   string
+		stdout string
+	}{
+		{
+			name: "with env",
+			params: &atlasexec.SchemaLintParams{
+				Env: "test",
+			},
+			args:   "schema lint --env test",
+			stdout: "lint result",
+		},
+		{
+			name: "with config",
+			params: &atlasexec.SchemaLintParams{
+				ConfigURL: "file://config.hcl",
+				Env:       "test",
+			},
+			args:   "schema lint --config file://config.hcl --env test",
+			stdout: "lint result",
+		},
+		{
+			name: "with URL",
+			params: &atlasexec.SchemaLintParams{
+				URL:    []string{"file://schema.hcl"},
+				DevURL: "sqlite://file?_fk=1&cache=shared&mode=memory",
+			},
+			args:   "schema lint --url file://schema.hcl --dev-url sqlite://file?_fk=1&cache=shared&mode=memory",
+			stdout: "lint result",
+		},
+		{
+			name: "with multiple URLs",
+			params: &atlasexec.SchemaLintParams{
+				URL:    []string{"file://schema1.hcl", "file://schema2.hcl"},
+				DevURL: "sqlite://file?_fk=1&cache=shared&mode=memory",
+			},
+			args:   "schema lint --url file://schema1.hcl --url file://schema2.hcl --dev-url sqlite://file?_fk=1&cache=shared&mode=memory",
+			stdout: "lint result",
+		},
+		{
+			name: "with dev-url and url",
+			params: &atlasexec.SchemaLintParams{
+				DevURL: "sqlite://file?_fk=1&cache=shared&mode=memory",
+				URL:    []string{"file://schema.hcl"},
+			},
+			args:   "schema lint --url file://schema.hcl --dev-url sqlite://file?_fk=1&cache=shared&mode=memory",
+			stdout: "lint result",
+		},
+		{
+			name: "with dev-url, url and schema",
+			params: &atlasexec.SchemaLintParams{
+				Schema: []string{"public", "private"},
+				DevURL: "sqlite://file?_fk=1&cache=shared&mode=memory",
+				URL:    []string{"file://schema.hcl"},
+			},
+			args:   "schema lint --url file://schema.hcl --dev-url sqlite://file?_fk=1&cache=shared&mode=memory --schema public,private",
+			stdout: "lint result",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("TEST_ARGS", tt.args)
+			t.Setenv("TEST_STDOUT", tt.stdout)
+			result, err := c.SchemaLint(context.Background(), tt.params)
+			require.NoError(t, err)
+			require.Equal(t, tt.stdout, result)
+		})
+	}
+}
