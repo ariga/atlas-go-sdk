@@ -3,6 +3,7 @@ package atlasexec
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -232,11 +233,12 @@ type (
 		ConfigURL string
 		Env       string
 		Vars      VarArgs
+		Context   *RunContext
 
-		DevURL string
 		URL    []string // Schema URL(s) to lint
 		Schema []string // If set, only the specified schemas are linted.
-		Format string   // Format for the output
+		Format string
+		DevURL string
 	}
 )
 
@@ -723,29 +725,46 @@ func (c *Client) SchemaClean(ctx context.Context, params *SchemaCleanParams) (*S
 
 // SchemaLint runs the 'schema lint' command.
 func (c *Client) SchemaLint(ctx context.Context, params *SchemaLintParams) (string, error) {
-	args := []string{"schema", "lint"}
-	// Global flags
-	if params.ConfigURL != "" {
-		args = append(args, "--config", params.ConfigURL)
+	if params.Writer != nil {
+		return "", errors.New("atlasexec: Writer is not supported with SchemaLint, use SchemaLintError")
 	}
-	if params.Env != "" {
-		args = append(args, "--env", params.Env)
-	}
-	if params.Vars != nil {
-		args = append(args, params.Vars.AsArgs()...)
-	}
-	// Flags of the 'schema lint' command
-	args = append(args, repeatFlag("--url", params.URL)...)
-	if params.DevURL != "" {
-		args = append(args, "--dev-url", params.DevURL)
-	}
-	if len(params.Schema) > 0 {
-		args = append(args, "--schema", listString(params.Schema))
-	}
-	if params.Format != "" {
-		args = append(args, "--format", params.Format)
+	args, err := params.AsArgs()
+	if err != nil {
+		return "", err
 	}
 	return stringVal(c.runCommand(ctx, args))
+}
+
+// AsArgs returns the parameters as arguments.
+func (p *SchemaLintParams) AsArgs() ([]string, error) {
+	args := []string{"schema", "lint"}
+	if p.Env != "" {
+		args = append(args, "--env", p.Env)
+	}
+	if p.ConfigURL != "" {
+		args = append(args, "--config", p.ConfigURL)
+	}
+	if p.DevURL != "" {
+		args = append(args, "--dev-url", p.DevURL)
+	}
+	if p.Context != nil {
+		buf, err := json.Marshal(p.Context)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, "--context", string(buf))
+	}
+	args = append(args, repeatFlag("--url", p.URL)...)
+	if len(p.Schema) > 0 {
+		args = append(args, "--schema", listString(p.Schema))
+	}
+	if p.Vars != nil {
+		args = append(args, p.Vars.AsArgs()...)
+	}
+	if p.Format != "" {
+		args = append(args, "--format", p.Format)
+	}
+	return args, nil
 }
 
 // InvalidParamsError is an error type for invalid parameters.
