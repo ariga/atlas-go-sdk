@@ -3,6 +3,8 @@ package atlasexec_test
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -781,4 +783,68 @@ func TestSchema_ApplyEnvs(t *testing.T) {
 	require.Equal(t, "sqlite://local-su.db", err2.Result[0].URL.String())
 	require.Equal(t, "sqlite://local-pi.db", err2.Result[1].URL.String())
 	require.Equal(t, "sqlite://local-bu.db", err2.Result[2].URL.String())
+}
+
+func TestAtlasSchema_Lint(t *testing.T) {
+	t.Run("with broken config", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		_, err = c.SchemaLint(context.Background(), &atlasexec.SchemaLintParams{
+			ConfigURL: "file://config-broken.hcl",
+		})
+		require.ErrorContains(t, err, `file "config-broken.hcl" was not found`)
+	})
+
+	t.Run("with missing dev-url", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		_, err = c.SchemaLint(context.Background(), &atlasexec.SchemaLintParams{
+			URL: []string{"file://testdata/schema.hcl"},
+		})
+		require.ErrorContains(t, err, `required flag(s) "dev-url" not set`)
+	})
+
+	t.Run("with non-existent schema file", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		_, err = c.SchemaLint(context.Background(), &atlasexec.SchemaLintParams{
+			DevURL: "sqlite://file?mode=memory",
+			URL:    []string{"file://testdata/doesnotexist.hcl"},
+		})
+		require.ErrorContains(t, err, "Error: stat testdata/doesnotexist.hcl: no such file or directory")
+	})
+
+	t.Run("with schema containing problems", func(t *testing.T) {
+		var (
+			atlashcl = filepath.Join(t.TempDir(), "atlas.hcl")
+			srv      = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				fmt.Fprintln(w, `{"data": {"me":{ "name": "p", "org": "life"}}}`)
+			}))
+		)
+		t.Cleanup(srv.Close)
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(atlashcl, []byte(fmt.Sprintf(`
+		atlas { 
+			cloud {	
+				token = "aci_token"
+				url = %q
+				org = "life"
+			}
+		}
+		lint {
+		  naming {
+			  table {
+			    match = "^[a-z_]+$"
+			  }
+		  }
+		}`, srv.URL)), 0600))
+		got, err := c.SchemaLint(context.Background(), &atlasexec.SchemaLintParams{
+			ConfigURL: "file://" + atlashcl,
+			DevURL:    "sqlite://file?mode=memory",
+			URL:       []string{sqlitedb(t, "create table T1(id int);")},
+		})
+		require.NoError(t, err)
+		require.Contains(t, got, "-- Table \"main.T1\" violates the naming policy")
+	})
 }

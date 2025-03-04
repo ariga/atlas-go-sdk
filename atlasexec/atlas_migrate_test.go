@@ -51,9 +51,7 @@ func TestMigrate_Status(t *testing.T) {
 	require.NoError(t, err)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dbpath := sqlitedb(t)
-			path := fmt.Sprintf("sqlite://%s", dbpath)
-			tt.args.data.URL = path
+			tt.args.data.URL = sqlitedb(t, "")
 			got, err := c.MigrateStatus(tt.args.ctx, tt.args.data)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("migrateStatus() error = %v, wantErr %v", err, tt.wantErr)

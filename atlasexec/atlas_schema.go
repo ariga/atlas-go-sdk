@@ -227,6 +227,17 @@ type (
 		Applied *AppliedFile `json:"Applied,omitempty"` // Applied migration file.
 		Error   string       `json:"Error,omitempty"`   // Any error that occurred during execution.
 	}
+	// SchemaLintParams are the parameters for the `schema lint` command.
+	SchemaLintParams struct {
+		ConfigURL string
+		Env       string
+		Vars      VarArgs
+
+		URL    []string // Schema URL(s) to lint
+		Schema []string // If set, only the specified schemas are linted.
+		Format string
+		DevURL string
+	}
 )
 
 // SchemaPush runs the 'schema push' command.
@@ -708,6 +719,40 @@ func (c *Client) SchemaClean(ctx context.Context, params *SchemaCleanParams) (*S
 		args = append(args, "--auto-approve")
 	}
 	return firstResult(jsonDecode[SchemaClean](c.runCommand(ctx, args)))
+}
+
+// SchemaLint runs the 'schema lint' command.
+func (c *Client) SchemaLint(ctx context.Context, params *SchemaLintParams) (string, error) {
+	args, err := params.AsArgs()
+	if err != nil {
+		return "", err
+	}
+	return stringVal(c.runCommand(ctx, args))
+}
+
+// AsArgs returns the parameters as arguments.
+func (p *SchemaLintParams) AsArgs() ([]string, error) {
+	args := []string{"schema", "lint"}
+	if p.Env != "" {
+		args = append(args, "--env", p.Env)
+	}
+	if p.ConfigURL != "" {
+		args = append(args, "--config", p.ConfigURL)
+	}
+	if p.DevURL != "" {
+		args = append(args, "--dev-url", p.DevURL)
+	}
+	args = append(args, repeatFlag("--url", p.URL)...)
+	if len(p.Schema) > 0 {
+		args = append(args, "--schema", listString(p.Schema))
+	}
+	if p.Vars != nil {
+		args = append(args, p.Vars.AsArgs()...)
+	}
+	if p.Format != "" {
+		args = append(args, "--format", p.Format)
+	}
+	return args, nil
 }
 
 // InvalidParamsError is an error type for invalid parameters.

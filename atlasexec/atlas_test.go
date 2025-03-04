@@ -156,12 +156,16 @@ func generateHCL(t *testing.T, token string, srv *httptest.Server) string {
 	return atlasConfigURL
 }
 
-func sqlitedb(t *testing.T) string {
+func sqlitedb(t *testing.T, seed string) string {
 	td := t.TempDir()
-	dbpath := filepath.Join(td, "file.db")
-	_, err := sql.Open("sqlite3", fmt.Sprintf("file:%s?cache=shared&_fk=1", dbpath))
+	dsn := fmt.Sprintf("file:%s?cache=shared&_fk=1", filepath.Join(td, "file.db"))
+	db, err := sql.Open("sqlite3", dsn)
 	require.NoError(t, err)
-	return dbpath
+	if seed != "" {
+		_, err = db.ExecContext(context.Background(), seed)
+		require.NoError(t, err)
+	}
+	return fmt.Sprintf("sqlite://%s", dsn)
 }
 
 type stringer struct{}
