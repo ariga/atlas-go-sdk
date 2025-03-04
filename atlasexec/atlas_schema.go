@@ -3,7 +3,6 @@ package atlasexec
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -725,9 +724,6 @@ func (c *Client) SchemaClean(ctx context.Context, params *SchemaCleanParams) (*S
 
 // SchemaLint runs the 'schema lint' command.
 func (c *Client) SchemaLint(ctx context.Context, params *SchemaLintParams) (string, error) {
-	if params.Writer != nil {
-		return "", errors.New("atlasexec: Writer is not supported with SchemaLint, use SchemaLintError")
-	}
 	args, err := params.AsArgs()
 	if err != nil {
 		return "", err
