@@ -232,7 +232,6 @@ type (
 		ConfigURL string
 		Env       string
 		Vars      VarArgs
-		Context   *RunContext
 
 		URL    []string // Schema URL(s) to lint
 		Schema []string // If set, only the specified schemas are linted.
@@ -742,13 +741,6 @@ func (p *SchemaLintParams) AsArgs() ([]string, error) {
 	}
 	if p.DevURL != "" {
 		args = append(args, "--dev-url", p.DevURL)
-	}
-	if p.Context != nil {
-		buf, err := json.Marshal(p.Context)
-		if err != nil {
-			return nil, err
-		}
-		args = append(args, "--context", string(buf))
 	}
 	args = append(args, repeatFlag("--url", p.URL)...)
 	if len(p.Schema) > 0 {
