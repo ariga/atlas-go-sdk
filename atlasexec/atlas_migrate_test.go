@@ -590,6 +590,43 @@ func TestMigrateHash(t *testing.T) {
 	require.NoError(t, inspect())
 }
 
+func TestMigrateRebase(t *testing.T) {
+	td := t.TempDir()
+	require.NoError(t, os.Mkdir(fmt.Sprintf("%s/migrations", td), 0777))
+	// create initial migrations dir state
+	require.NoError(t, os.WriteFile(fmt.Sprintf("%s/migrations/2024030709.sql", td), []byte(`create table t (c int not null)`), 0666))
+	require.NoError(t, os.WriteFile(fmt.Sprintf("%s/migrations/2024030711.sql", td), []byte("alter table `t` add column `c3` text not null;"), 0666))
+	c, err := atlasexec.NewClient(td, "atlas")
+	require.NoError(t, err)
+	require.NoError(t, c.MigrateHash(context.Background(), &atlasexec.MigrateHashParams{}))
+	require.FileExists(t, fmt.Sprintf("%s/migrations/atlas.sum", td))
+	// Print atlas.sum before adding a new migration
+	before, err := os.ReadFile(fmt.Sprintf("%s/migrations/atlas.sum", td))
+	require.NoError(t, err)
+
+	// add a new migration
+	require.NoError(t, os.WriteFile(fmt.Sprintf("%s/migrations/2024030710.sql", td), []byte("alter table `t` add column `c2` text not null;"), 0666))
+	require.NoError(t, c.MigrateHash(context.Background(), &atlasexec.MigrateHashParams{}))
+	require.FileExists(t, fmt.Sprintf("%s/migrations/atlas.sum", td))
+	require.NoError(t, c.MigrateRebase(context.Background(), &atlasexec.MigrateRebaseParams{
+		Files: []string{
+			"2024030711.sql",
+		},
+		DirURL: fmt.Sprintf("file://%s/migrations", td),
+	}))
+	inspect := func() error {
+		_, err = c.SchemaInspect(context.Background(), &atlasexec.SchemaInspectParams{
+			DevURL: "sqlite://file?mode=memory",
+			URL:    fmt.Sprintf("file://%s/migrations", td),
+		})
+		return err
+	}
+	// ensure sum file changes after rebase
+	after, err := os.ReadFile(fmt.Sprintf("%s/migrations/atlas.sum", td))
+	require.NotEqual(t, before, after)
+	require.NoError(t, inspect())
+}
+
 func TestAtlasMigrate_Lint(t *testing.T) {
 	t.Run("with broken config", func(t *testing.T) {
 		c, err := atlasexec.NewClient(".", "atlas")
