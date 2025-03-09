@@ -66,7 +66,7 @@ type (
 		SCMType  SCMType `json:"scmType,omitempty"`  // Source control management system type.
 	}
 	// SCMType is a type for the "scm_type" enum field.
-	SCMType string // Only GITHUB is supported for now.
+	SCMType string
 	// DeployRunContext is an input type for describing the context in which
 	// `migrate-apply` and `migrate down` were used. For example, a GitHub Action with version v1.2.3
 	DeployRunContext struct {
