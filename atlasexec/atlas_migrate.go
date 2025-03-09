@@ -124,6 +124,15 @@ type (
 		DirURL    string
 		DirFormat string
 	}
+	// MigrateRebaseParams are the parameters for the `migrate rebase` command.
+	MigrateRebaseParams struct {
+		ConfigURL string
+		Env       string
+		Vars      VarArgs
+
+		DirURL string
+		Files  []string
+	}
 	// MigrateTestParams are the parameters for the `migrate test` command.
 	MigrateTestParams struct {
 		ConfigURL string
@@ -410,6 +419,26 @@ func (c *Client) MigrateHash(ctx context.Context, params *MigrateHashParams) err
 	if params.DirFormat != "" {
 		args = append(args, "--dir-format", params.DirFormat)
 	}
+	_, err := c.runCommand(ctx, args)
+	return err
+}
+
+// MigrateRebase runs the 'migrate rebase' command.
+func (c *Client) MigrateRebase(ctx context.Context, params *MigrateRebaseParams) error {
+	args := []string{"migrate", "rebase"}
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
+	}
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
+	}
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
+	if params.DirURL != "" {
+		args = append(args, "--dir", params.DirURL)
+	}
+	args = append(args, strings.Join(params.Files, " "))
 	_, err := c.runCommand(ctx, args)
 	return err
 }
