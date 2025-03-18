@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"ariga.io/atlas/sql/migrate"
+	"ariga.io/atlas/sql/sqlcheck"
 )
 
 type (
@@ -237,6 +238,10 @@ type (
 		Schema []string // If set, only the specified schemas are linted.
 		Format string
 		DevURL string
+	}
+	// SchemaLintReport holds the results of a schema lint operation
+	SchemaLintReport struct {
+		Steps []sqlcheck.Report `json:"Steps,omitempty"`
 	}
 )
 
@@ -722,17 +727,17 @@ func (c *Client) SchemaClean(ctx context.Context, params *SchemaCleanParams) (*S
 }
 
 // SchemaLint runs the 'schema lint' command.
-func (c *Client) SchemaLint(ctx context.Context, params *SchemaLintParams) (string, error) {
+func (c *Client) SchemaLint(ctx context.Context, params *SchemaLintParams) (*SchemaLintReport, error) {
 	args, err := params.AsArgs()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return stringVal(c.runCommand(ctx, args))
+	return firstResult(jsonDecode[SchemaLintReport](c.runCommand(ctx, args)))
 }
 
 // AsArgs returns the parameters as arguments.
 func (p *SchemaLintParams) AsArgs() ([]string, error) {
-	args := []string{"schema", "lint"}
+	args := []string{"schema", "lint", "--format", "{{ json . }}"}
 	if p.Env != "" {
 		args = append(args, "--env", p.Env)
 	}
@@ -749,11 +754,6 @@ func (p *SchemaLintParams) AsArgs() ([]string, error) {
 	if p.Vars != nil {
 		args = append(args, p.Vars.AsArgs()...)
 	}
-	format := "{{ json . }}"
-	if p.Format != "" {
-		format = p.Format
-	}
-	args = append(args, "--format", format)
 	return args, nil
 }
 

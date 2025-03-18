@@ -838,12 +838,17 @@ func TestAtlasSchema_Lint(t *testing.T) {
 	t.Run("with schema containing problems", func(t *testing.T) {
 		c, err := atlasexec.NewClient(".", "atlas")
 		require.NoError(t, err)
-		got, err := c.SchemaLint(context.Background(), &atlasexec.SchemaLintParams{
+		report, err := c.SchemaLint(context.Background(), &atlasexec.SchemaLintParams{
 			ConfigURL: "file://" + atlashcl,
 			DevURL:    "sqlite://file?mode=memory",
 			URL:       []string{sqlitedb(t, "create table T1(id int);")},
 		})
 		require.NoError(t, err)
-		require.Contains(t, got, "-- Table \"main.T1\" violates the naming policy")
+		require.NotNil(t, report)
+		require.NotEmpty(t, report.Steps)
+		require.Len(t, report.Steps, 1)
+		require.Len(t, report.Steps[0].Diagnostics, 1)
+		require.Equal(t, "Table \"main.T1\" violates the naming policy", report.Steps[0].Diagnostics[0].Text)
+		require.Equal(t, "NM102", report.Steps[0].Diagnostics[0].Code)
 	})
 }
