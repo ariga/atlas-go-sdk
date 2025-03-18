@@ -749,9 +749,11 @@ func (p *SchemaLintParams) AsArgs() ([]string, error) {
 	if p.Vars != nil {
 		args = append(args, p.Vars.AsArgs()...)
 	}
+	format := "{{ json . }}"
 	if p.Format != "" {
-		args = append(args, "--format", p.Format)
+		format = p.Format
 	}
+	args = append(args, "--format", format)
 	return args, nil
 }
 
