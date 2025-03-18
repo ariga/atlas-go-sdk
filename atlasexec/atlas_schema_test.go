@@ -803,28 +803,14 @@ func TestAtlasSchema_Lint(t *testing.T) {
 		})
 		require.ErrorContains(t, err, `required flag(s) "dev-url" not set`)
 	})
-
-	t.Run("with non-existent schema file", func(t *testing.T) {
-		c, err := atlasexec.NewClient(".", "atlas")
-		require.NoError(t, err)
-		_, err = c.SchemaLint(context.Background(), &atlasexec.SchemaLintParams{
-			DevURL: "sqlite://file?mode=memory",
-			URL:    []string{"file://testdata/doesnotexist.hcl"},
-		})
-		require.ErrorContains(t, err, "Error: stat testdata/doesnotexist.hcl: no such file or directory")
-	})
-
-	t.Run("with schema containing problems", func(t *testing.T) {
-		var (
-			atlashcl = filepath.Join(t.TempDir(), "atlas.hcl")
-			srv      = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				fmt.Fprintln(w, `{"data": {"me":{ "name": "p", "org": "life"}}}`)
-			}))
-		)
-		t.Cleanup(srv.Close)
-		c, err := atlasexec.NewClient(".", "atlas")
-		require.NoError(t, err)
-		require.NoError(t, os.WriteFile(atlashcl, []byte(fmt.Sprintf(`
+	var (
+		atlashcl = filepath.Join(t.TempDir(), "atlas.hcl")
+		srv      = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintln(w, `{"data": {"me":{ "name": "p", "org": "life"}}}`)
+		}))
+	)
+	t.Cleanup(srv.Close)
+	require.NoError(t, os.WriteFile(atlashcl, []byte(fmt.Sprintf(`
 		atlas { 
 			cloud {	
 				token = "aci_token"
@@ -839,6 +825,19 @@ func TestAtlasSchema_Lint(t *testing.T) {
 			  }
 		  }
 		}`, srv.URL)), 0600))
+	t.Run("with non-existent schema file", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		_, err = c.SchemaLint(context.Background(), &atlasexec.SchemaLintParams{
+			ConfigURL: "file://" + atlashcl,
+			DevURL:    "sqlite://file?mode=memory",
+			URL:       []string{"file://testdata/doesnotexist.hcl"},
+		})
+		require.ErrorContains(t, err, "Error: stat testdata/doesnotexist.hcl: no such file or directory")
+	})
+	t.Run("with schema containing problems", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
 		got, err := c.SchemaLint(context.Background(), &atlasexec.SchemaLintParams{
 			ConfigURL: "file://" + atlashcl,
 			DevURL:    "sqlite://file?mode=memory",
