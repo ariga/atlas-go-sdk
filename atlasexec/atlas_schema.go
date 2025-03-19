@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"ariga.io/atlas/sql/migrate"
-	"ariga.io/atlas/sql/sqlcheck"
 )
 
 type (
@@ -241,7 +240,7 @@ type (
 	}
 	// SchemaLintReport holds the results of a schema lint operation
 	SchemaLintReport struct {
-		Steps []sqlcheck.Report `json:"Steps,omitempty"`
+		Steps []Report `json:"Steps,omitempty"`
 	}
 )
 

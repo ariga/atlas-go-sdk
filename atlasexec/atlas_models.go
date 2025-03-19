@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"ariga.io/atlas/sql/schema"
 	"ariga.io/atlas/sql/sqlcheck"
 	"ariga.io/atlas/sql/sqlclient"
 )
@@ -117,6 +118,19 @@ type (
 		Error           string        `json:"Error,omitempty"`     // Error of the migration, if any occurred.
 		ErrorStmt       string        `json:"ErrorStmt,omitempty"` // ErrorStmt is the statement that raised Error.
 		OperatorVersion string        `json:"OperatorVersion"`     // OperatorVersion that executed this migration.
+	}
+	// A Report describes a schema analysis report with an optional specific diagnostic.
+	Report struct {
+		Text        string       `json:"Text"`                  // Report text.
+		Desc        string       `json:"Desc,omitempty"`        // Optional description (secondary text).
+		Diagnostics []Diagnostic `json:"Diagnostics,omitempty"` // Report diagnostics.
+
+	}
+	// A Diagnostic is a text associated with a specific position of a definition/element in a file.
+	Diagnostic struct {
+		Pos  *schema.Pos `json:"Pos,omitempty"`  // Element position.
+		Text string      `json:"Text"`           // Diagnostic text.
+		Code string      `json:"Code,omitempty"` // Code describes the check (optional).
 	}
 )
 
