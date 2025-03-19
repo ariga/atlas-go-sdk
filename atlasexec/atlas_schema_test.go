@@ -3,6 +3,8 @@ package atlasexec_test
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -781,4 +783,116 @@ func TestSchema_ApplyEnvs(t *testing.T) {
 	require.Equal(t, "sqlite://local-su.db", err2.Result[0].URL.String())
 	require.Equal(t, "sqlite://local-pi.db", err2.Result[1].URL.String())
 	require.Equal(t, "sqlite://local-bu.db", err2.Result[2].URL.String())
+}
+
+func TestAtlasSchema_Lint(t *testing.T) {
+	t.Run("with broken config", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		_, err = c.SchemaLint(context.Background(), &atlasexec.SchemaLintParams{
+			ConfigURL: "file://config-broken.hcl",
+		})
+		require.ErrorContains(t, err, `file "config-broken.hcl" was not found`)
+	})
+
+	t.Run("with missing dev-url", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		_, err = c.SchemaLint(context.Background(), &atlasexec.SchemaLintParams{
+			URL: []string{"file://testdata/schema.hcl"},
+		})
+		require.ErrorContains(t, err, `required flag(s) "dev-url" not set`)
+	})
+	var (
+		atlashcl = filepath.Join(t.TempDir(), "atlas.hcl")
+		srv      = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintln(w, `{"data": {"me":{ "name": "p", "org": "life"}}}`)
+		}))
+	)
+	t.Cleanup(srv.Close)
+	require.NoError(t, os.WriteFile(atlashcl, []byte(fmt.Sprintf(`
+		atlas { 
+			cloud {	
+				token = "aci_token"
+				url = %q
+				org = "life"
+			}
+		}
+		lint {
+		  naming {
+			  table {
+			    match = "^[a-z_]+$"
+			  }
+		  }
+		}`, srv.URL)), 0600))
+	t.Run("with non-existent schema file", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		_, err = c.SchemaLint(context.Background(), &atlasexec.SchemaLintParams{
+			ConfigURL: "file://" + atlashcl,
+			DevURL:    "sqlite://file?mode=memory",
+			URL:       []string{"file://testdata/doesnotexist.hcl"},
+		})
+		require.ErrorContains(t, err, "Error: stat testdata/doesnotexist.hcl: no such file or directory")
+	})
+	t.Run("with schema containing problems", func(t *testing.T) {
+		c, err := atlasexec.NewClient(".", "atlas")
+		require.NoError(t, err)
+		report, err := c.SchemaLint(context.Background(), &atlasexec.SchemaLintParams{
+			ConfigURL: "file://" + atlashcl,
+			DevURL:    "sqlite://file?mode=memory",
+			URL:       []string{sqlitedb(t, "create table T1(id int);")},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, report)
+		require.NotEmpty(t, report.Steps)
+		require.Len(t, report.Steps, 1)
+		require.Len(t, report.Steps[0].Diagnostics, 1)
+		require.Equal(t, "Table \"main.T1\" violates the naming policy", report.Steps[0].Diagnostics[0].Text)
+		require.Equal(t, "NM102", report.Steps[0].Diagnostics[0].Code)
+	})
+}
+
+func TestSchema_Lint(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name   string
+		params *atlasexec.SchemaLintParams
+		args   string
+	}{
+		{
+			name: "with dev-url and url",
+			params: &atlasexec.SchemaLintParams{
+				URL:    []string{"file://testdata/schema.hcl"},
+				DevURL: "sqlite://file?mode=memory",
+			},
+			args: "schema lint --format {{ json . }} --dev-url sqlite://file?mode=memory --url file://testdata/schema.hcl",
+		},
+		{
+			name: "with dev-url and url and schema",
+			params: &atlasexec.SchemaLintParams{
+				URL:    []string{"file://testdata/schema.hcl"},
+				DevURL: "sqlite://file?mode=memory",
+				Schema: []string{"main", "bupisu"},
+			},
+			args: "schema lint --format {{ json . }} --dev-url sqlite://file?mode=memory --url file://testdata/schema.hcl --schema main,bupisu",
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("TEST_ARGS", tt.args)
+			t.Setenv("TEST_STDOUT", `{"Steps":[{"Diagnostics":[{"Text":"Table \"main.T1\" violates the naming policy","Code":"NM102"}]}]}`)
+			result, err := c.SchemaLint(context.Background(), tt.params)
+			require.NoError(t, err)
+			require.NotNil(t, result)
+			require.NotEmpty(t, result.Steps)
+			require.Len(t, result.Steps, 1)
+			require.Len(t, result.Steps[0].Diagnostics, 1)
+			require.Equal(t, "Table \"main.T1\" violates the naming policy", result.Steps[0].Diagnostics[0].Text)
+		})
+	}
 }
