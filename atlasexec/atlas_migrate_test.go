@@ -369,6 +369,9 @@ func TestAtlasMigrate_ApplyWithRemote(t *testing.T) {
 		ContextInput struct {
 			TriggerType    string `json:"triggerType,omitempty"`
 			TriggerVersion string `json:"triggerVersion,omitempty"`
+			UserID         string `json:"userId,omitempty"`
+			Username       string `json:"username,omitempty"`
+			SCMType        string `json:"scmType,omitempty"`
 		}
 		graphQLQuery struct {
 			Query              string          `json:"query"`
@@ -430,8 +433,14 @@ func TestAtlasMigrate_ApplyWithRemote(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, reportPayload.MigrateApplyReport.Input.Context)
 	got, err = c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
-		Env:     "test",
-		Context: &atlasexec.DeployRunContext{TriggerVersion: "1.2.3", TriggerType: atlasexec.TriggerTypeGithubAction},
+		Env: "test",
+		Context: &atlasexec.DeployRunContext{
+			TriggerVersion: "1.2.3",
+			TriggerType:    atlasexec.TriggerTypeGithubAction,
+			UserID:         "test-user-id",
+			Username:       "test-user",
+			SCMType:        atlasexec.SCMTypeGithub,
+		},
 	})
 	require.NoError(t, err)
 	require.NotNil(t, got)
@@ -443,6 +452,9 @@ func TestAtlasMigrate_ApplyWithRemote(t *testing.T) {
 	require.NotNil(t, reportPayload.MigrateApplyReport.Input.Context)
 	require.Equal(t, "GITHUB_ACTION", reportPayload.MigrateApplyReport.Input.Context.TriggerType)
 	require.Equal(t, "1.2.3", reportPayload.MigrateApplyReport.Input.Context.TriggerVersion)
+	require.Equal(t, "test-user-id", reportPayload.MigrateApplyReport.Input.Context.UserID)
+	require.Equal(t, "test-user", reportPayload.MigrateApplyReport.Input.Context.Username)
+	require.Equal(t, "GITHUB", reportPayload.MigrateApplyReport.Input.Context.SCMType)
 }
 
 func TestAtlasMigrate_Push(t *testing.T) {
