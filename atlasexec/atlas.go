@@ -72,6 +72,9 @@ type (
 	DeployRunContext struct {
 		TriggerType    TriggerType `json:"triggerType,omitempty"`
 		TriggerVersion string      `json:"triggerVersion,omitempty"`
+		Username       string      `json:"username,omitempty"` // The username that triggered the event that initiated the command.
+		UserID         string      `json:"userID,omitempty"`   // The user ID that triggered the event that initiated the command.
+		SCMType        SCMType     `json:"scmType,omitempty"`  // Source control management system type.
 	}
 	// TriggerType defines the type for the "trigger_type" enum field.
 	TriggerType string
