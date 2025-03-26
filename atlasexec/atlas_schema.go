@@ -240,6 +240,7 @@ type (
 	}
 	// SchemaLintReport holds the results of a schema lint operation
 	SchemaLintReport struct {
+		URL   []string `json:"URL,omitempty"` // Redacted Schema URL(s)
 		Steps []Report `json:"Steps,omitempty"`
 	}
 )
