@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"ariga.io/atlas/sql/migrate"
+	"ariga.io/atlas/sql/sqlclient"
 )
 
 type (
@@ -732,7 +733,27 @@ func (c *Client) SchemaLint(ctx context.Context, params *SchemaLintParams) (*Sch
 	if err != nil {
 		return nil, err
 	}
-	return firstResult(jsonDecode[SchemaLintReport](c.runCommand(ctx, args)))
+	rp, err := firstResult(jsonDecode[SchemaLintReport](c.runCommand(ctx, args)))
+	if err != nil {
+		return nil, err
+	}
+	redactedURLs := make([]string, len(params.URL))
+	for i, u := range params.URL {
+		redactedURLs[i], err = redactedURL(u)
+		if err != nil {
+			return nil, err
+		}
+	}
+	rp.URL = redactedURLs
+	return rp, nil
+}
+
+func redactedURL(s string) (string, error) {
+	u, err := sqlclient.ParseURL(s)
+	if err != nil {
+		return "", err
+	}
+	return u.Redacted(), nil
 }
 
 // AsArgs returns the parameters as arguments.

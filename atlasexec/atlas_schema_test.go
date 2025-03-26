@@ -858,41 +858,58 @@ func TestSchema_Lint(t *testing.T) {
 	require.NoError(t, err)
 	c, err := atlasexec.NewClient(t.TempDir(), filepath.Join(wd, "./mock-atlas.sh"))
 	require.NoError(t, err)
-
-	testCases := []struct {
-		name   string
-		params *atlasexec.SchemaLintParams
-		args   string
-	}{
-		{
-			name: "with dev-url and url",
-			params: &atlasexec.SchemaLintParams{
-				URL:    []string{"file://testdata/schema.hcl"},
-				DevURL: "sqlite://file?mode=memory",
+	t.Run("verify args", func(t *testing.T) {
+		testCases := []struct {
+			name   string
+			params *atlasexec.SchemaLintParams
+			args   string
+		}{
+			{
+				name: "with dev-url and url",
+				params: &atlasexec.SchemaLintParams{
+					URL:    []string{"file://testdata/schema.hcl"},
+					DevURL: "sqlite://file?mode=memory",
+				},
+				args: "schema lint --format {{ json . }} --dev-url sqlite://file?mode=memory --url file://testdata/schema.hcl",
 			},
-			args: "schema lint --format {{ json . }} --dev-url sqlite://file?mode=memory --url file://testdata/schema.hcl",
-		},
-		{
-			name: "with dev-url and url and schema",
-			params: &atlasexec.SchemaLintParams{
-				URL:    []string{"file://testdata/schema.hcl"},
-				DevURL: "sqlite://file?mode=memory",
-				Schema: []string{"main", "bupisu"},
+			{
+				name: "with dev-url and url and schema",
+				params: &atlasexec.SchemaLintParams{
+					URL:    []string{"file://testdata/schema.hcl"},
+					DevURL: "sqlite://file?mode=memory",
+					Schema: []string{"main", "bupisu"},
+				},
+				args: "schema lint --format {{ json . }} --dev-url sqlite://file?mode=memory --url file://testdata/schema.hcl --schema main,bupisu",
 			},
-			args: "schema lint --format {{ json . }} --dev-url sqlite://file?mode=memory --url file://testdata/schema.hcl --schema main,bupisu",
-		},
-	}
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("TEST_ARGS", tt.args)
-			t.Setenv("TEST_STDOUT", `{"Steps":[{"Diagnostics":[{"Text":"Table \"main.T1\" violates the naming policy","Code":"NM102"}]}]}`)
-			result, err := c.SchemaLint(context.Background(), tt.params)
-			require.NoError(t, err)
-			require.NotNil(t, result)
-			require.NotEmpty(t, result.Steps)
-			require.Len(t, result.Steps, 1)
-			require.Len(t, result.Steps[0].Diagnostics, 1)
-			require.Equal(t, "Table \"main.T1\" violates the naming policy", result.Steps[0].Diagnostics[0].Text)
-		})
-	}
+		}
+		for _, tt := range testCases {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Setenv("TEST_ARGS", tt.args)
+				t.Setenv("TEST_STDOUT", `{"Steps":[{"Diagnostics":[{"Text":"Table \"main.T1\" violates the naming policy","Code":"NM102"}]}]}`)
+				result, err := c.SchemaLint(context.Background(), tt.params)
+				require.NoError(t, err)
+				require.NotNil(t, result)
+				require.NotEmpty(t, result.Steps)
+				require.Len(t, result.Steps, 1)
+				require.Len(t, result.Steps[0].Diagnostics, 1)
+				require.Equal(t, "Table \"main.T1\" violates the naming policy", result.Steps[0].Diagnostics[0].Text)
+			})
+		}
+	})
+	t.Run("verify URL redaction", func(t *testing.T) {
+		params := &atlasexec.SchemaLintParams{
+			URL: []string{
+				"mysql://root:password123@localhost:3306/testdb",
+			},
+			DevURL: "docker://mysql/8/dev",
+			Schema: []string{"main", "bupisu"},
+		}
+		t.Setenv("TEST_ARGS", "schema lint --format {{ json . }} --dev-url docker://mysql/8/dev --url mysql://root:password123@localhost:3306/testdb --schema main,bupisu")
+		t.Setenv("TEST_STDOUT", `{"Steps":[{"Diagnostics":[{"Text":"Table \"main.T1\" violates the naming policy","Code":"NM102"}]}]}`)
+		result, err := c.SchemaLint(context.Background(), params)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.Len(t, result.URL, 1)
+		require.Equal(t, "mysql://root:xxxxx@localhost:3306/testdb", result.URL[0])
+	})
 }
