@@ -402,9 +402,9 @@ func (c *Client) MigrateStatus(ctx context.Context, params *MigrateStatusParams)
 	return firstResult(jsonDecode[MigrateStatus](c.runCommand(ctx, args)))
 }
 
-// MigrateDiff runs the 'migrate diff' command and returns the generated migration files.
+// MigrateDiff runs the 'migrate diff --dry-run' command and returns the generated migration files without changing the filesystem.
+// Requires atlas CLI to be logged in to the cloud.
 func (c *Client) MigrateDiff(ctx context.Context, params *MigrateDiffParams) (*MigrateDiff, error) {
-	// Always use the --dry-run flag to avoid changing the file system.
 	args := []string{"migrate", "diff", "--dry-run"}
 	if params.Env != "" {
 		args = append(args, "--env", params.Env)
