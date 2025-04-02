@@ -442,7 +442,16 @@ func (c *Client) MigrateDiff(ctx context.Context, params *MigrateDiffParams) (*M
 	if params.Name != "" {
 		args = append(args, params.Name)
 	}
-	return firstResult(jsonDecode[MigrateDiff](c.runCommand(ctx, args)))
+	v, err := jsonDecode[MigrateDiff](c.runCommand(ctx, args))
+	var e *Error
+	switch {
+	// if jsonDecode returns an error, and stderr is empty, it means the migration is synced with the desired state.
+	case errors.As(err, &e) && e.Stderr == "":
+		return &MigrateDiff{}, nil
+	case err != nil:
+		return nil, err
+	}
+	return firstResult(v, nil)
 }
 
 // MigrateLint runs the 'migrate lint' command.

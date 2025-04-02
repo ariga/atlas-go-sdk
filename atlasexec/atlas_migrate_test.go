@@ -914,4 +914,15 @@ func TestMigrate_Diff(t *testing.T) {
 	require.Len(t, output.Files, 1)
 	require.Contains(t, output.Files[0].Name, "test-diff.sql")
 	require.Equal(t, output.Files[0].Content, "-- Disable the enforcement of foreign-keys constraints\nPRAGMA foreign_keys = off;\n-- Drop \"t1\" table\nDROP TABLE `t1`;\n-- Create \"t\" table\nCREATE TABLE `t` (`c` int NOT NULL);\n-- Enable back the enforcement of foreign-keys constraints\nPRAGMA foreign_keys = on;\n")
+
+	// No diff
+	params = &atlasexec.MigrateDiffParams{
+		ToURL:  "file://testdata/migrations",
+		DevURL: "sqlite://file?mode=memory",
+		DirURL: "file://testdata/migrations",
+		Name:   "test-diff",
+	}
+	output, err = c.MigrateDiff(context.Background(), params)
+	require.NoError(t, err)
+	require.Len(t, output.Files, 0)
 }
