@@ -24,6 +24,8 @@ jobs:
         with:
           go-version-file: ./go.mod
       - uses: ariga/setup-atlas@v0
+        with:
+          cloud-token: ${{ secrets.ATLAS_TOKEN }}
         env:
           ATLAS_DEBUG: "true"
       - name: Run tests

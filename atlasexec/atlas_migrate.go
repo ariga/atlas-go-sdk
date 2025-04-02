@@ -157,6 +157,25 @@ type (
 		URL             string
 		RevisionsSchema string
 	}
+	// MigrateDiffParams are the parameters for the `migrate diff` command.
+	MigrateDiffParams struct {
+		ConfigURL string
+		Env       string
+		Vars      VarArgs
+
+		Name        string
+		ToURL       string
+		DevURL      string
+		DirURL      string
+		DirFormat   string
+		Schema      []string
+		LockTimeout string
+		Format      string
+		Qualifier   string
+	}
+	MigrateDiff struct {
+		Files []File `json:"Files,omitempty"` // Generated migration files
+	}
 	// MigrateStatus contains a summary of the migration status of a database.
 	MigrateStatus struct {
 		Available []File      `json:"Available,omitempty"` // Available migration files
@@ -381,6 +400,58 @@ func (c *Client) MigrateStatus(ctx context.Context, params *MigrateStatusParams)
 	}
 	// NOTE: This command only support one result.
 	return firstResult(jsonDecode[MigrateStatus](c.runCommand(ctx, args)))
+}
+
+// MigrateDiff runs the 'migrate diff --dry-run' command and returns the generated migration files without changing the filesystem.
+// Requires atlas CLI to be logged in to the cloud.
+func (c *Client) MigrateDiff(ctx context.Context, params *MigrateDiffParams) (*MigrateDiff, error) {
+	args := []string{"migrate", "diff", "--dry-run"}
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
+	}
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
+	}
+	if params.ToURL != "" {
+		args = append(args, "--to", params.ToURL)
+	}
+	if params.DevURL != "" {
+		args = append(args, "--dev-url", params.DevURL)
+	}
+	if params.DirURL != "" {
+		args = append(args, "--dir", params.DirURL)
+	}
+	if params.DirFormat != "" {
+		args = append(args, "--dir-format", params.DirFormat)
+	}
+	if params.LockTimeout != "" {
+		args = append(args, "--lock-timeout", params.LockTimeout)
+	}
+	if params.Qualifier != "" {
+		args = append(args, "--qualifier", params.Qualifier)
+	}
+	if len(params.Schema) > 0 {
+		args = append(args, "--schema", strings.Join(params.Schema, ","))
+	}
+	if params.Format != "" {
+		args = append(args, "--format", params.Format)
+	}
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
+	if params.Name != "" {
+		args = append(args, params.Name)
+	}
+	v, err := jsonDecode[MigrateDiff](c.runCommand(ctx, args))
+	var e *Error
+	switch {
+	// if jsonDecode returns an error, and stderr is empty, it means the migration is synced with the desired state.
+	case errors.As(err, &e) && e.Stderr == "":
+		return &MigrateDiff{}, nil
+	case err != nil:
+		return nil, err
+	}
+	return firstResult(v, nil)
 }
 
 // MigrateLint runs the 'migrate lint' command.
