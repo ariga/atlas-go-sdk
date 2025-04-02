@@ -157,6 +157,22 @@ type (
 		URL             string
 		RevisionsSchema string
 	}
+	// MigrateDiffParams are the parameters for the `migrate diff` command.
+	MigrateDiffParams struct {
+		ConfigURL string
+		Env       string
+		Vars      VarArgs
+
+		ToURL       string
+		DevURL      string
+		DirURL      string
+		DirFormat   string
+		Schema      []string
+		LockTimeout string
+		Format      string
+		Qualifier   string
+		DryRun      bool
+	}
 	// MigrateStatus contains a summary of the migration status of a database.
 	MigrateStatus struct {
 		Available []File      `json:"Available,omitempty"` // Available migration files
@@ -381,6 +397,47 @@ func (c *Client) MigrateStatus(ctx context.Context, params *MigrateStatusParams)
 	}
 	// NOTE: This command only support one result.
 	return firstResult(jsonDecode[MigrateStatus](c.runCommand(ctx, args)))
+}
+
+// MigrateDiff runs the 'migrate diff' command.
+// This command might change the file system, so it should be used with caution.
+func (c *Client) MigrateDiff(ctx context.Context, params *MigrateDiffParams) (string, error) {
+	// Always use the --dry-run flag to avoid changing the file system.
+	args := []string{"migrate", "diff", "--dry-run"}
+	if params.Env != "" {
+		args = append(args, "--env", params.Env)
+	}
+	if params.ConfigURL != "" {
+		args = append(args, "--config", params.ConfigURL)
+	}
+	if params.ToURL != "" {
+		args = append(args, "--to", params.ToURL)
+	}
+	if params.DevURL != "" {
+		args = append(args, "--dev-url", params.DevURL)
+	}
+	if params.DirURL != "" {
+		args = append(args, "--dir", params.DirURL)
+	}
+	if params.DirFormat != "" {
+		args = append(args, "--dir-format", params.DirFormat)
+	}
+	if params.LockTimeout != "" {
+		args = append(args, "--lock-timeout", params.LockTimeout)
+	}
+	if params.Qualifier != "" {
+		args = append(args, "--qualifier", params.Qualifier)
+	}
+	if len(params.Schema) > 0 {
+		args = append(args, "--schema", strings.Join(params.Schema, ","))
+	}
+	if params.Format != "" {
+		args = append(args, "--format", params.Format)
+	}
+	if params.Vars != nil {
+		args = append(args, params.Vars.AsArgs()...)
+	}
+	return stringVal(c.runCommand(ctx, args))
 }
 
 // MigrateLint runs the 'migrate lint' command.
