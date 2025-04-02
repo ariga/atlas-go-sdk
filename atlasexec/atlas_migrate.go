@@ -163,6 +163,7 @@ type (
 		Env       string
 		Vars      VarArgs
 
+		Name        string
 		ToURL       string
 		DevURL      string
 		DirURL      string
@@ -171,7 +172,9 @@ type (
 		LockTimeout string
 		Format      string
 		Qualifier   string
-		DryRun      bool
+	}
+	MigrateDiff struct {
+		Files []File `json:"Files,omitempty"` // Generated migration files
 	}
 	// MigrateStatus contains a summary of the migration status of a database.
 	MigrateStatus struct {
@@ -399,9 +402,8 @@ func (c *Client) MigrateStatus(ctx context.Context, params *MigrateStatusParams)
 	return firstResult(jsonDecode[MigrateStatus](c.runCommand(ctx, args)))
 }
 
-// MigrateDiff runs the 'migrate diff' command.
-// This command might change the file system, so it should be used with caution.
-func (c *Client) MigrateDiff(ctx context.Context, params *MigrateDiffParams) (string, error) {
+// MigrateDiff runs the 'migrate diff' command and returns the generated migration files.
+func (c *Client) MigrateDiff(ctx context.Context, params *MigrateDiffParams) (*MigrateDiff, error) {
 	// Always use the --dry-run flag to avoid changing the file system.
 	args := []string{"migrate", "diff", "--dry-run"}
 	if params.Env != "" {
@@ -437,7 +439,10 @@ func (c *Client) MigrateDiff(ctx context.Context, params *MigrateDiffParams) (st
 	if params.Vars != nil {
 		args = append(args, params.Vars.AsArgs()...)
 	}
-	return stringVal(c.runCommand(ctx, args))
+	if params.Name != "" {
+		args = append(args, params.Name)
+	}
+	return firstResult(jsonDecode[MigrateDiff](c.runCommand(ctx, args)))
 }
 
 // MigrateLint runs the 'migrate lint' command.

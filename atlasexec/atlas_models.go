@@ -15,6 +15,7 @@ type (
 		Name        string `json:"Name,omitempty"`
 		Version     string `json:"Version,omitempty"`
 		Description string `json:"Description,omitempty"`
+		Content     string `json:"Content,omitempty"`
 	}
 	// AppliedFile is part of a MigrateApply containing information about an applied file in a migration attempt.
 	AppliedFile struct {

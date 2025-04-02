@@ -897,3 +897,21 @@ func TestAtlasMigrate_LintWithLogin(t *testing.T) {
 		require.True(t, found)
 	})
 }
+
+func TestMigrate_Diff(t *testing.T) {
+	c, err := atlasexec.NewClient(".", "atlas")
+	require.NoError(t, err)
+	td := t.TempDir()
+	require.NoError(t, os.WriteFile(fmt.Sprintf("%s/schema.sql", td), []byte(`create table t (c int not null)`), 0666))
+	params := &atlasexec.MigrateDiffParams{
+		ToURL:  fmt.Sprintf("file://%s/schema.sql", td),
+		DevURL: "sqlite://file?mode=memory",
+		DirURL: "file://testdata/migrations",
+		Name:   "test-diff",
+	}
+	output, err := c.MigrateDiff(context.Background(), params)
+	require.NoError(t, err)
+	require.Len(t, output.Files, 1)
+	require.Contains(t, output.Files[0].Name, "test-diff.sql")
+	require.Equal(t, output.Files[0].Content, "-- Disable the enforcement of foreign-keys constraints\nPRAGMA foreign_keys = off;\n-- Drop \"t1\" table\nDROP TABLE `t1`;\n-- Create \"t\" table\nCREATE TABLE `t` (`c` int NOT NULL);\n-- Enable back the enforcement of foreign-keys constraints\nPRAGMA foreign_keys = on;\n")
+}
