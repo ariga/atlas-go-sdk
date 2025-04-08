@@ -175,6 +175,7 @@ type (
 	}
 	MigrateDiff struct {
 		Files []File `json:"Files,omitempty"` // Generated migration files
+		Dir   string `json:"Dir,omitempty"`   // Path to migration directory
 	}
 	// MigrateStatus contains a summary of the migration status of a database.
 	MigrateStatus struct {
