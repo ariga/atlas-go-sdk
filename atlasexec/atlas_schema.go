@@ -80,6 +80,7 @@ type (
 
 		URL     string
 		Exclude []string
+		Include []string
 		Schema  []string
 	}
 	// SchemaTestParams are the parameters for the `schema test` command.
@@ -363,6 +364,9 @@ func (c *Client) SchemaInspect(ctx context.Context, params *SchemaInspectParams)
 	}
 	if len(params.Exclude) > 0 {
 		args = append(args, "--exclude", listString(params.Exclude))
+	}
+	if len(params.Include) > 0 {
+		args = append(args, "--include", listString(params.Include))
 	}
 	if params.Vars != nil {
 		args = append(args, params.Vars.AsArgs()...)
