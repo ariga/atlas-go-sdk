@@ -1,9 +1,11 @@
 package main
 
 import (
-    "fmt"
+  "fmt"
+
+  "ariga.io/atlas-go-sdk/tmplrun/testdata"
 )
 
 func main() {
-  fmt.Println("{{ .Message }}")
+  fmt.Println("{{ .Message }}", testdata.Foo())
 }

@@ -15,12 +15,12 @@ var (
 )
 
 func TestRunner(t *testing.T) {
-	runner := New("test", loaderTmpl)
+	runner := New("test", loaderTmpl, WithBuildTags("testdata"))
 	out, err := runner.Run(struct {
 		Message string
 	}{
 		Message: "Hello, World!",
 	})
 	require.NoError(t, err)
-	require.Contains(t, out, "Hello, World!")
+	require.Contains(t, out, "Hello, World! foo")
 }
