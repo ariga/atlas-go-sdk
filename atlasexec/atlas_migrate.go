@@ -236,12 +236,20 @@ func (c *Client) MigratePush(ctx context.Context, params *MigratePushParams) (st
 }
 
 // MigrateApply runs the 'migrate apply' command.
-func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (*MigrateApply, error) {
-	return firstResult(c.MigrateApplySlice(ctx, params))
+func (c *Client) MigrateApply(ctx context.Context, params *MigrateApplyParams) (*MigrateApply, io.Reader, error) {
+	res, stderr, err := c.MigrateApplySlice(ctx, params)
+	switch {
+	case err != nil:
+		return nil, nil, err
+	case len(res) == 1:
+		return res[0], stderr, nil
+	default:
+		return nil, nil, errors.New("the command returned more than one result, use Slice function instead")
+	}
 }
 
 // MigrateApplySlice runs the 'migrate apply' command for multiple targets.
-func (c *Client) MigrateApplySlice(ctx context.Context, params *MigrateApplyParams) ([]*MigrateApply, error) {
+func (c *Client) MigrateApplySlice(ctx context.Context, params *MigrateApplyParams) ([]*MigrateApply, io.Reader, error) {
 	args := []string{"migrate", "apply", "--format", "{{ json . }}"}
 	if params.Env != "" {
 		args = append(args, "--env", params.Env)
@@ -252,7 +260,7 @@ func (c *Client) MigrateApplySlice(ctx context.Context, params *MigrateApplyPara
 	if params.Context != nil {
 		buf, err := json.Marshal(params.Context)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		args = append(args, "--context", string(buf))
 	}
@@ -286,7 +294,9 @@ func (c *Client) MigrateApplySlice(ctx context.Context, params *MigrateApplyPara
 	if params.Vars != nil {
 		args = append(args, params.Vars.AsArgs()...)
 	}
-	return jsonDecodeErr(newMigrateApplyError)(c.runCommand(ctx, args))
+	stdout, stderr, err := c.runCommandWithStderr(ctx, args)
+	res, err := jsonDecodeErr(newMigrateApplyError)(stdout, err)
+	return res, stderr, err
 }
 
 // MigrateDown runs the 'migrate down' command.

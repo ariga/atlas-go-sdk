@@ -296,6 +296,36 @@ func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, erro
 	return &stdout, nil
 }
 
+func (c *Client) runCommandWithStderr(ctx context.Context, args []string) (io.Reader, io.Reader, error) {
+	var stdout, stderr bytes.Buffer
+	cmd := exec.CommandContext(ctx, c.execPath, args...)
+	cmd.Dir = c.workingDir
+	var env Environ
+	if c.env == nil {
+		// Initialize the environment variables from the OS.
+		env = NewOSEnviron()
+	} else {
+		env = maps.Clone(c.env)
+	}
+	maps.Copy(env, defaultEnvs)
+	cmd.Env = env.ToSlice()
+	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
+	if err := cmd.Run(); err != nil {
+		e := strings.TrimSpace(stderr.String())
+		// Explicit check the stderr for the login error.
+		if e == "Error: command requires 'atlas login'" {
+			return nil, nil, ErrRequireLogin
+		}
+		return nil, nil, &Error{
+			err:    err,
+			Stderr: strings.TrimSpace(stderr.String()),
+			Stdout: strings.TrimSpace(stdout.String()),
+		}
+	}
+	return &stdout, &stderr, nil
+}
+
 // Error is an error returned by the atlasexec package,
 // when it executes the atlas-cli command.
 type Error struct {
