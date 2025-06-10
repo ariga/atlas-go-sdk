@@ -29,11 +29,14 @@ func ExampleClient_MigrateApply() {
 		log.Fatalf("failed to initialize client: %v", err)
 	}
 	// Run `atlas migrate apply` on a SQLite database under /tmp.
-	res, err := client.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
+	res, stderr, err := client.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
 		URL: "sqlite:///tmp/demo.db?_fk=1&cache=shared",
 	})
 	if err != nil {
 		log.Fatalf("failed to apply migrations: %v", err)
+	}
+	if stderr != "" {
+		log.Printf("stderr: %s", stderr)
 	}
 	fmt.Printf("Applied %d migrations\n", len(res.Applied))
 }

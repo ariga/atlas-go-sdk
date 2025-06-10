@@ -26,20 +26,22 @@ func Test_SQLite(t *testing.T) {
 		require.Equal(t, 1, len(s.Pending))
 		require.Equal(t, "20240112070806", s.Pending[0].Version)
 
-		r, err := c.MigrateApply(ctx, &atlasexec.MigrateApplyParams{
+		r, stderr, err := c.MigrateApply(ctx, &atlasexec.MigrateApplyParams{
 			URL: url,
 			Env: "local",
 		})
 		require.NoError(t, err)
+		require.Empty(t, stderr, "Should be no stderr")
 		require.Equal(t, 1, len(r.Applied), "Should be one migration applied")
 		require.Equal(t, "20240112070806", r.Applied[0].Version, "Should be the correct migration applied")
 
 		// Apply again, should be a no-op.
-		r, err = c.MigrateApply(ctx, &atlasexec.MigrateApplyParams{
+		r, stderr, err = c.MigrateApply(ctx, &atlasexec.MigrateApplyParams{
 			URL: url,
 			Env: "local",
 		})
 		require.NoError(t, err, "Should be no error")
+		require.Empty(t, stderr, "Should be no stderr")
 		require.Equal(t, 0, len(r.Applied), "Should be no migrations applied")
 	})
 }
@@ -60,20 +62,22 @@ func Test_PostgreSQL(t *testing.T) {
 		require.Equal(t, 1, len(s.Pending))
 		require.Equal(t, "20240112070806", s.Pending[0].Version)
 
-		r, err := c.MigrateApply(ctx, &atlasexec.MigrateApplyParams{
+		r, stderr, err := c.MigrateApply(ctx, &atlasexec.MigrateApplyParams{
 			URL: url,
 			Env: "local",
 		})
 		require.NoError(t, err)
+		require.Empty(t, stderr, "Should be no stderr")
 		require.Equal(t, 1, len(r.Applied), "Should be one migration applied")
 		require.Equal(t, "20240112070806", r.Applied[0].Version, "Should be the correct migration applied")
 
 		// Apply again, should be a no-op.
-		r, err = c.MigrateApply(ctx, &atlasexec.MigrateApplyParams{
+		r, stderr, err = c.MigrateApply(ctx, &atlasexec.MigrateApplyParams{
 			URL: url,
 			Env: "local",
 		})
 		require.NoError(t, err, "Should be no error")
+		require.Empty(t, stderr, "Should be no stderr")
 		require.Equal(t, 0, len(r.Applied), "Should be no migrations applied")
 	})
 }
@@ -82,11 +86,12 @@ func Test_MultiTenants(t *testing.T) {
 	t.Setenv("ATLASEXEC_E2ETEST_ATLAS_PATH", "atlas")
 	runTestWithVersions(t, []string{"latest"}, "multi-tenants", func(t *testing.T, ver *atlasexec.Version, wd *atlasexec.WorkingDir, c *atlasexec.Client) {
 		ctx := context.Background()
-		r, err := c.MigrateApplySlice(ctx, &atlasexec.MigrateApplyParams{
+		r, stderr, err := c.MigrateApplySlice(ctx, &atlasexec.MigrateApplyParams{
 			Env:    "local",
 			Amount: 1, // Only apply one migration.
 		})
 		require.NoError(t, err)
+		require.Empty(t, stderr, "Should be no stderr")
 		require.Len(t, r, 2, "Should be two tenants")
 		require.Equal(t, 1, len(r[0].Applied), "Should be one migration applied")
 		require.Equal(t, "20240112070806", r[0].Applied[0].Version, "Should be the correct migration applied")
@@ -100,10 +105,11 @@ func Test_MultiTenants(t *testing.T) {
 		require.NoError(t, err)
 
 		// Apply again, should be one successful and one failed migration.
-		_, err = c.MigrateApplySlice(ctx, &atlasexec.MigrateApplyParams{
+		_, stderr, err = c.MigrateApplySlice(ctx, &atlasexec.MigrateApplyParams{
 			Env: "local",
 		})
 		require.ErrorContains(t, err, "UNIQUE constraint failed", "Should be error")
+		require.Empty(t, stderr, "Should be no stderr")
 		mae, ok := err.(*atlasexec.MigrateApplyError)
 		require.True(t, ok, "Should be a MigrateApplyError")
 		require.Len(t, mae.Result, 2, "Should be two reports")
@@ -114,10 +120,11 @@ func Test_MultiTenants(t *testing.T) {
 		require.Contains(t, mae.Result[1].Error, "UNIQUE constraint failed", "Should be the correct error")
 
 		// Apply again, should be one successful and one failed migration.
-		_, err = c.MigrateApplySlice(ctx, &atlasexec.MigrateApplyParams{
+		_, stderr, err = c.MigrateApplySlice(ctx, &atlasexec.MigrateApplyParams{
 			Env: "local",
 		})
 		require.ErrorContains(t, err, "UNIQUE constraint failed", "Should be error")
+		require.Empty(t, stderr, "Should be no stderr")
 		mae, ok = err.(*atlasexec.MigrateApplyError)
 		require.True(t, ok, "Should be a MigrateApplyError")
 		require.Len(t, mae.Result, 2, "Should be two reports")

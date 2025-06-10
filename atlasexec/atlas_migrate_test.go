@@ -109,8 +109,9 @@ func TestMigrate_Apply(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("TEST_ARGS", tt.args)
 			t.Setenv("TEST_STDOUT", tt.stdout)
-			result, err := c.MigrateApply(context.Background(), tt.params)
+			result, stderr, err := c.MigrateApply(context.Background(), tt.params)
 			require.NoError(t, err)
+			require.Empty(t, stderr)
 			require.NotNil(t, result)
 			require.Equal(t, "mysql", result.Driver)
 		})
@@ -286,11 +287,12 @@ func TestMigrate_Test(t *testing.T) {
 func TestAtlasMigrate_ApplyBroken(t *testing.T) {
 	c, err := atlasexec.NewClient(".", "atlas")
 	require.NoError(t, err)
-	got, err := c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
+	got, stderr, err := c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
 		URL:    "sqlite://?mode=memory",
 		DirURL: "file://testdata/broken",
 	})
 	require.ErrorContains(t, err, `sql/migrate: executing statement "broken;" from version "20231029112426": near "broken": syntax error`)
+	require.Empty(t, stderr)
 	require.Nil(t, got)
 	report, ok := err.(*atlasexec.MigrateApplyError)
 	require.True(t, ok)
@@ -330,16 +332,17 @@ func TestAtlasMigrate_Apply(t *testing.T) {
 	})
 	c, err := atlasexec.NewClient(ec.Path(), "atlas")
 	require.NoError(t, err)
-	got, err := c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
+	got, stderr, err := c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
 		Env: "test",
 	})
 	require.ErrorContains(t, err, `required flag "url" not set`)
+	require.Empty(t, stderr)
 	require.Nil(t, got)
 	var exerr *exec.ExitError
 	require.ErrorAs(t, err, &exerr)
 	// Set the env var and try again
 	os.Setenv("DB_URL", "sqlite://file?_fk=1&cache=shared&mode=memory")
-	got, err = c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
+	got, stderr, err = c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
 		Env: "test",
 	})
 	require.NoError(t, err)
@@ -354,11 +357,12 @@ func TestAtlasMigrate_Apply(t *testing.T) {
 	defer os.Remove("test.db")
 	_, err = drv.ExecContext(context.Background(), "create table atlas_schema_revisions(version varchar(255) not null primary key);")
 	require.NoError(t, err)
-	got, err = c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
+	got, stderr, err = c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
 		Env:        "test",
 		AllowDirty: true,
 	})
 	require.NoError(t, err)
+	require.Empty(t, stderr)
 	require.EqualValues(t, "20230926085734", got.Target)
 }
 
@@ -416,10 +420,11 @@ func TestAtlasMigrate_ApplyWithRemote(t *testing.T) {
 	})
 	c, err := atlasexec.NewClient(ec.Path(), "atlas")
 	require.NoError(t, err)
-	got, err := c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
+	got, stderr, err := c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
 		Env: "test",
 	})
 	require.NoError(t, err)
+	require.Empty(t, stderr)
 	require.NotNil(t, got)
 	require.Len(t, payloads, 3)
 	reportPayload := payloads[2]
@@ -427,11 +432,12 @@ func TestAtlasMigrate_ApplyWithRemote(t *testing.T) {
 	err = json.Unmarshal(reportPayload.Variables, &reportPayload.MigrateApplyReport)
 	require.NoError(t, err)
 	require.Nil(t, reportPayload.MigrateApplyReport.Input.Context)
-	got, err = c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
+	got, stderr, err = c.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
 		Env:     "test",
 		Context: &atlasexec.DeployRunContext{TriggerVersion: "1.2.3", TriggerType: atlasexec.TriggerTypeGithubAction},
 	})
 	require.NoError(t, err)
+	require.Empty(t, stderr)
 	require.NotNil(t, got)
 	require.Len(t, payloads, 6)
 	reportPayload = payloads[5]
