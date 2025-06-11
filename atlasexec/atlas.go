@@ -281,7 +281,7 @@ func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, erro
 	cmd.Env = env.ToSlice()
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Run(); err != nil || stderr.Len() > 0 {
 		e := strings.TrimSpace(stderr.String())
 		// Explicit check the stderr for the login error.
 		if e == "Error: command requires 'atlas login'" {
