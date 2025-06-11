@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# TEST_BATCH provide the directory containts all
-# outputs for multiple runs. The path should be absolulate
+# TEST_BATCH provide the directory contains all
+# outputs for multiple runs. The path should be absolute
 # or related to current working directory.
 if [[ "$TEST_BATCH" != "" ]]; then
   COUNTER_FILE=$TEST_BATCH/counter
