@@ -913,7 +913,7 @@ func TestMigrate_Diff(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, output.Files, 1)
 	require.Contains(t, output.Files[0].Name, "test-diff.sql")
-	require.Equal(t, output.Files[0].Content, "-- Disable the enforcement of foreign-keys constraints\nPRAGMA foreign_keys = off;\n-- Drop \"t1\" table\nDROP TABLE `t1`;\n-- Create \"t\" table\nCREATE TABLE `t` (`c` int NOT NULL);\n-- Enable back the enforcement of foreign-keys constraints\nPRAGMA foreign_keys = on;\n")
+	require.Equal(t, output.Files[0].Content, "-- Disable the enforcement of foreign-keys constraints\nPRAGMA foreign_keys = off;\n-- Drop \"t1\" table\nDROP TABLE `t1`;\n-- Create \"t\" table\nCREATE TABLE `t` (\n  `c` int NOT NULL\n);\n-- Enable back the enforcement of foreign-keys constraints\nPRAGMA foreign_keys = on;\n")
 	require.Equal(t, output.Dir, "file://testdata/migrations?format=atlas")
 
 	// No diff

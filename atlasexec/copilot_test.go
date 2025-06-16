@@ -31,4 +31,11 @@ func TestCopilot(t *testing.T) {
 	copilot, err = c.Copilot(context.Background(), p)
 	require.NoError(t, err)
 	require.Equal(t, "Berlin.", copilot.String())
+
+	p = &atlasexec.CopilotParams{Prompt: "And Israel?", Session: "id", FSWrite: "*", FSDelete: "**"}
+	t.Setenv("TEST_ARGS", fmt.Sprintf("copilot -q %s -r %s -p fs.write=%s -p fs.delete=%s", p.Prompt, p.Session, p.FSWrite, p.FSDelete))
+	t.Setenv("TEST_STDOUT", `{"sessionID":"id","type":"message","content":"Jerusalem."}`)
+	copilot, err = c.Copilot(context.Background(), p)
+	require.NoError(t, err)
+	require.Equal(t, "Jerusalem.", copilot.String())
 }

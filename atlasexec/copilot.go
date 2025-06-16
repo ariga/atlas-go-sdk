@@ -6,7 +6,11 @@ import (
 )
 
 type (
-	CopilotParams struct{ Prompt, Session string }
+	CopilotParams struct {
+		Prompt, Session string
+		// FSWrite and FSDelete glob patterns to specify file permissions.
+		FSWrite, FSDelete string
+	}
 	// Copilot is the result of a Copilot execution.
 	Copilot []*CopilotMessage
 	// CopilotMessage is the JSON message emitted by the Copilot OneShot execution.
@@ -25,6 +29,12 @@ func (c *Client) Copilot(ctx context.Context, params *CopilotParams) (Copilot, e
 	args := []string{"copilot", "-q", params.Prompt}
 	if params.Session != "" {
 		args = append(args, "-r", params.Session)
+	}
+	if params.FSWrite != "" {
+		args = append(args, "-p", "fs.write="+params.FSWrite)
+	}
+	if params.FSDelete != "" {
+		args = append(args, "-p", "fs.delete="+params.FSDelete)
 	}
 	return jsonDecode[CopilotMessage](c.runCommand(ctx, args))
 }
