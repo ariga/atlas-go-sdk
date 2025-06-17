@@ -124,8 +124,8 @@ type (
 	Report struct {
 		Text        string       `json:"Text"`                  // Report text.
 		Desc        string       `json:"Desc,omitempty"`        // Optional description (secondary text).
+		Error       bool         `json:"Error,omitempty"`       // Report is an error report.
 		Diagnostics []Diagnostic `json:"Diagnostics,omitempty"` // Report diagnostics.
-
 	}
 	// A Diagnostic is a text associated with a specific position of a definition/element in a file.
 	Diagnostic struct {
