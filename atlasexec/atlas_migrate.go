@@ -179,6 +179,7 @@ type (
 	}
 	// MigrateStatus contains a summary of the migration status of a database.
 	MigrateStatus struct {
+		Env       Env         `json:"Env,omitempty"`       // Environment info.
 		Available []File      `json:"Available,omitempty"` // Available migration files
 		Pending   []File      `json:"Pending,omitempty"`   // Pending migration files
 		Applied   []*Revision `json:"Applied,omitempty"`   // Applied migration files
