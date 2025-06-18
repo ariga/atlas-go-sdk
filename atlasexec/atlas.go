@@ -22,6 +22,8 @@ type (
 		execPath   string
 		workingDir string
 		env        Environ
+		stdout     io.Writer
+		stderr     io.Writer
 	}
 	// LoginParams are the parameters for the `login` command.
 	LoginParams struct {
@@ -155,6 +157,16 @@ func (c *Client) SetEnv(env map[string]string) error {
 	return nil
 }
 
+// SetStdout specifies a writer to stream stdout to for every command.
+func (c *Client) SetStdout(w io.Writer) {
+	c.stdout = w
+}
+
+// SetStderr specifies a writer to stream stderr to for every command.
+func (c *Client) SetStderr(w io.Writer) {
+	c.stderr = w
+}
+
 // Login runs the 'login' command.
 func (c *Client) Login(ctx context.Context, params *LoginParams) error {
 	if params.Token == "" {
@@ -267,7 +279,6 @@ var ErrRequireLogin = errors.New("command requires 'atlas login'")
 
 // runCommand runs the given command and returns its output.
 func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, error) {
-	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, c.execPath, args...)
 	cmd.Dir = c.workingDir
 	var env Environ
@@ -279,8 +290,9 @@ func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, erro
 	}
 	maps.Copy(env, defaultEnvs)
 	cmd.Env = env.ToSlice()
-	cmd.Stderr = &stderr
-	cmd.Stdout = &stdout
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = mergeWriters(&stdout, c.stdout)
+	cmd.Stderr = mergeWriters(&stderr, c.stderr)
 	if err := cmd.Run(); err != nil {
 		e := strings.TrimSpace(stderr.String())
 		// Explicit check the stderr for the login error.
@@ -294,6 +306,23 @@ func (c *Client) runCommand(ctx context.Context, args []string) (io.Reader, erro
 		}
 	}
 	return &stdout, nil
+}
+
+func mergeWriters(writers ...io.Writer) io.Writer {
+	compact := []io.Writer{}
+	for _, w := range writers {
+		if w != nil {
+			compact = append(compact, w)
+		}
+	}
+	switch len(compact) {
+	case 1:
+		return compact[0]
+	case 0:
+		return io.Discard
+	default:
+		return io.MultiWriter(compact...)
+	}
 }
 
 // Error is an error returned by the atlasexec package,
