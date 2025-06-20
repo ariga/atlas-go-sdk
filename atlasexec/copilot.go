@@ -2,6 +2,7 @@ package atlasexec
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 )
 
@@ -37,6 +38,68 @@ func (c *Client) Copilot(ctx context.Context, params *CopilotParams) (Copilot, e
 		args = append(args, "-p", "fs.delete="+params.FSDelete)
 	}
 	return jsonDecode[CopilotMessage](c.runCommand(ctx, args))
+}
+
+type copilotStream struct {
+	s   Stream[string]
+	cur *CopilotMessage
+	err error
+}
+
+// Next advances the stream to the next CopilotMessage.
+func (s *copilotStream) Next() bool {
+	s.cur = nil
+	s.err = nil
+	return s.s.Next()
+}
+
+// Current returns the current CopilotMessage from the stream.
+func (s *copilotStream) Current() (*CopilotMessage, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	if s.cur == nil {
+		cur, err := s.s.Current()
+		if err != nil {
+			s.err = err
+			return nil, err
+		}
+		var m CopilotMessage
+		if s.err = json.Unmarshal([]byte(cur), &m); s.err != nil {
+			return nil, s.err
+		}
+		s.cur = &m
+	}
+	return s.cur, nil
+}
+
+// Err returns the error encountered during the stream processing.
+func (s *copilotStream) Err() error {
+	if s.err != nil {
+		return s.err
+	}
+	return s.s.Err()
+}
+
+var _ Stream[*CopilotMessage] = (*copilotStream)(nil)
+
+// CopilotStream executes a one-shot Copilot session, streaming the result.
+func (c *Client) CopilotStream(ctx context.Context, params *CopilotParams) (Stream[*CopilotMessage], error) {
+	args := []string{"copilot", "-q", params.Prompt}
+	if params.Session != "" {
+		args = append(args, "-r", params.Session)
+	}
+	if params.FSWrite != "" {
+		args = append(args, "-p", "fs.write="+params.FSWrite)
+	}
+	if params.FSDelete != "" {
+		args = append(args, "-p", "fs.delete="+params.FSDelete)
+	}
+	s, err := c.runCommandStream(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+	return &copilotStream{s: s}, nil
 }
 
 func (c Copilot) String() string {
