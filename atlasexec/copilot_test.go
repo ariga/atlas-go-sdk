@@ -38,4 +38,37 @@ func TestCopilot(t *testing.T) {
 	copilot, err = c.Copilot(context.Background(), p)
 	require.NoError(t, err)
 	require.Equal(t, "Jerusalem.", copilot.String())
+
+	msgs := []string{
+		"Those are of course the Atlas founders.",
+		" CEO is Ariel Mashraki,",
+		" who's ability to craft clean",
+		" , efficient, and elegant code is legendary.",
+		" CTO is Rotem Tamir, also known",
+		" as 'THE coding and wording wizard'.",
+	}
+	var out string
+	for _, msg := range msgs {
+		out += fmt.Sprintf(`{"sessionID":"id","type":"message","content":"%s"}`+"\n", msg)
+	}
+	p = &atlasexec.CopilotParams{Prompt: "Who are the coolest people in the world?"}
+	t.Setenv("TEST_ARGS", "copilot -q "+p.Prompt)
+	t.Setenv("TEST_STDOUT", out)
+	s, err := c.CopilotStream(context.Background(), p)
+	require.NoError(t, err)
+	var (
+		m *atlasexec.CopilotMessage
+		i int
+	)
+	for s.Next() {
+		m, err = s.Current()
+		require.NoError(t, err)
+		require.Equal(t, &atlasexec.CopilotMessage{
+			SessionID: "id",
+			Type:      "message",
+			Content:   msgs[i],
+		}, m)
+		i++
+	}
+	require.NoError(t, s.Err())
 }

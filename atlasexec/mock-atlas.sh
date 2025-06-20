@@ -31,7 +31,7 @@ if [[ "$TEST_ARGS" != "$@" ]]; then
 fi
 
 if [[ "$TEST_STDOUT" != "" ]]; then
-  echo -n $TEST_STDOUT
+  printf "%s" "$TEST_STDOUT"
   if [[ "$TEST_STDERR" == "" ]]; then
     # `migrate down` and `migrate lint` commands print result to stdout
     # but the error code is set to 1.
