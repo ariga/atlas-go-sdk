@@ -6,6 +6,12 @@ import (
 	"strings"
 )
 
+const (
+	CopilotTypeMessage    = "message"
+	CopilotTypeToolCall   = "tool_call"
+	CopilotTypeToolOutput = "tool_output"
+)
+
 type (
 	CopilotParams struct {
 		Prompt, Session string
@@ -18,10 +24,24 @@ type (
 	CopilotMessage struct {
 		// Session ID for the Copilot session.
 		SessionID string `json:"sessionID,omitempty"`
-		// Type of the message. Only "message" is currently supported.
+
+		// Type of the message. Can be "message", "tool_call", or "tool_output".
 		Type string `json:"type"`
-		// Content of the message,
-		Content string `json:"content,omitempty"`
+
+		// Content, ToolCall and ToolOutput are mutually exclusive.
+		Content    string             `json:"content,omitempty"`
+		ToolCall   *ToolCallMessage   `json:"toolCall,omitempty"`
+		ToolOutput *ToolOutputMessage `json:"toolOutput,omitempty"`
+	}
+	ToolCallMessage struct {
+		CallID    string `json:"callID"`
+		Function  string `json:"function"`
+		Arguments string `json:"arguments"`
+	}
+	// ToolOutputMessage is the output of a tool call.
+	ToolOutputMessage struct {
+		CallID  string `json:"callID"`
+		Content string `json:"content"`
 	}
 )
 
@@ -105,7 +125,9 @@ func (c *Client) CopilotStream(ctx context.Context, params *CopilotParams) (Stre
 func (c Copilot) String() string {
 	var buf strings.Builder
 	for _, msg := range c {
-		buf.WriteString(msg.Content)
+		if msg.Type == CopilotTypeMessage {
+			buf.WriteString(msg.Content)
+		}
 	}
 	return buf.String()
 }
