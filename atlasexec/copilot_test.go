@@ -20,6 +20,8 @@ func TestCopilot(t *testing.T) {
 	p := &atlasexec.CopilotParams{Prompt: "What is the capital of France?"}
 	t.Setenv("TEST_ARGS", "copilot -q "+p.Prompt)
 	t.Setenv("TEST_STDOUT", `{"sessionID":"id","type":"message","content":"The capital of"}
+{"sessionID":"id","type":"tool_call","toolCall":{"callID":"1","function":"get_capital","arguments":"France"}}
+{"sessionID":"id","type":"tool_output","toolOutput":{"callID":"1","content":"Paris"}}
 {"sessionID":"id","type":"message","content":" France is Paris."}`)
 	copilot, err := c.Copilot(context.Background(), p)
 	require.NoError(t, err)
