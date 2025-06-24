@@ -124,6 +124,8 @@ type (
 		Context   *RunContext
 		DevURL    string
 		Schema    []string
+		Exclude   []string
+		Include   []string
 
 		From, To []string
 		Repo     string
@@ -137,6 +139,8 @@ type (
 		Context   *RunContext
 		DevURL    string
 		Schema    []string
+		Exclude   []string
+		Include   []string
 
 		From, To []string
 		Repo     string
@@ -158,6 +162,8 @@ type (
 		Context   *RunContext
 		DevURL    string
 		Schema    []string
+		Exclude   []string
+		Include   []string
 
 		From, To []string
 		Repo     string
@@ -171,6 +177,8 @@ type (
 		Context   *RunContext
 		DevURL    string
 		Schema    []string
+		Exclude   []string
+		Include   []string
 
 		From, To []string
 		Repo     string
@@ -502,6 +510,12 @@ func (c *Client) SchemaPlanList(ctx context.Context, params *SchemaPlanListParam
 	if len(params.Schema) > 0 {
 		args = append(args, "--schema", listString(params.Schema))
 	}
+	if len(params.Exclude) > 0 {
+		args = append(args, "--exclude", listString(params.Exclude))
+	}
+	if len(params.Include) > 0 {
+		args = append(args, "--include", listString(params.Include))
+	}
 	if len(params.From) > 0 {
 		args = append(args, "--from", listString(params.From))
 	}
@@ -550,6 +564,12 @@ func (c *Client) SchemaPlanPush(ctx context.Context, params *SchemaPlanPushParam
 	}
 	if len(params.Schema) > 0 {
 		args = append(args, "--schema", listString(params.Schema))
+	}
+	if len(params.Exclude) > 0 {
+		args = append(args, "--exclude", listString(params.Exclude))
+	}
+	if len(params.Include) > 0 {
+		args = append(args, "--include", listString(params.Include))
 	}
 	if len(params.From) > 0 {
 		args = append(args, "--from", listString(params.From))
@@ -623,6 +643,12 @@ func (c *Client) SchemaPlanLint(ctx context.Context, params *SchemaPlanLintParam
 	if len(params.Schema) > 0 {
 		args = append(args, "--schema", listString(params.Schema))
 	}
+	if len(params.Exclude) > 0 {
+		args = append(args, "--exclude", listString(params.Exclude))
+	}
+	if len(params.Include) > 0 {
+		args = append(args, "--include", listString(params.Include))
+	}
 	if len(params.From) > 0 {
 		args = append(args, "--from", listString(params.From))
 	}
@@ -669,6 +695,12 @@ func (c *Client) SchemaPlanValidate(ctx context.Context, params *SchemaPlanValid
 	}
 	if len(params.Schema) > 0 {
 		args = append(args, "--schema", listString(params.Schema))
+	}
+	if len(params.Exclude) > 0 {
+		args = append(args, "--exclude", listString(params.Exclude))
+	}
+	if len(params.Include) > 0 {
+		args = append(args, "--include", listString(params.Include))
 	}
 	if len(params.From) > 0 {
 		args = append(args, "--from", listString(params.From))
