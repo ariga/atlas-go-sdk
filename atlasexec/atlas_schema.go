@@ -43,6 +43,7 @@ type (
 		To          string // TODO: change to []string
 		TxMode      string
 		Exclude     []string
+		Include     []string
 		Schema      []string
 		DryRun      bool   // If true, --dry-run is set.
 		AutoApprove bool   // If true, --auto-approve is set.
@@ -101,6 +102,8 @@ type (
 		Vars      VarArgs
 		Context   *RunContext
 		DevURL    string
+		Exclude   []string
+		Include   []string
 		Schema    []string
 
 		From, To   []string
@@ -326,6 +329,9 @@ func (c *Client) SchemaApplySlice(ctx context.Context, params *SchemaApplyParams
 	if len(params.Exclude) > 0 {
 		args = append(args, "--exclude", listString(params.Exclude))
 	}
+	if len(params.Include) > 0 {
+		args = append(args, "--include", listString(params.Include))
+	}
 	if params.PlanURL != "" {
 		args = append(args, "--plan", params.PlanURL)
 	}
@@ -428,6 +434,12 @@ func (c *Client) SchemaPlan(ctx context.Context, params *SchemaPlanParams) (*Sch
 	}
 	if len(params.Schema) > 0 {
 		args = append(args, "--schema", listString(params.Schema))
+	}
+	if len(params.Exclude) > 0 {
+		args = append(args, "--exclude", listString(params.Exclude))
+	}
+	if len(params.Include) > 0 {
+		args = append(args, "--include", listString(params.Include))
 	}
 	if len(params.From) > 0 {
 		args = append(args, "--from", listString(params.From))

@@ -321,6 +321,13 @@ func TestSchema_Plan(t *testing.T) {
 			},
 			args: "schema plan --format {{ json . }} --repo testing-repo --push --auto-approve",
 		},
+		{
+			name: "with include",
+			params: &atlasexec.SchemaPlanParams{
+				Include: []string{"public", "bupisu"},
+			},
+			args: "schema plan --format {{ json . }} --include public,bupisu --auto-approve",
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
