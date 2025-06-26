@@ -94,13 +94,15 @@ const (
 	TriggerTypeCircleCIOrb  TriggerType = "CIRCLECI_ORB"
 	TriggerTypeGitlab       TriggerType = "GITLAB"
 	TriggerTypeBitbucket    TriggerType = "BITBUCKET"
+	TriggerTypeAzureDevOps  TriggerType = "AZURE_DEVOPS"
 )
 
 // SCMType values.
 const (
-	SCMTypeGithub    SCMType = "GITHUB"
-	SCMTypeGitlab    SCMType = "GITLAB"
-	SCMTypeBitbucket SCMType = "BITBUCKET"
+	SCMTypeGithub      SCMType = "GITHUB"
+	SCMTypeGitlab      SCMType = "GITLAB"
+	SCMTypeBitbucket   SCMType = "BITBUCKET"
+	SCMTypeAzureDevOps SCMType = "AZURE_DEVOPS"
 )
 
 // ExecutionOrder values.
